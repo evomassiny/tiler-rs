@@ -1,0 +1,8 @@
+[package]
+name = "tiler"
+version = "0.1.0"
+authors = ["evomassiny <hanzohatory@gamil.com>"]
+
+[dependencies]
+netcdf = { git = "https://github.com/evomassiny/rust-netcdf", branch = "develop" }
+image = "*"

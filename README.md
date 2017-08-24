@@ -11,11 +11,17 @@ This is a weekend project, don't expect to much of it.
 sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
 ```
 
-* Then you should be able to build and run it using the rust package manager *cargo*:
+* Then you should be able to build it using the rust package manager *cargo*:
 
 ```
-cargo run
+cargo build --release
 ```
-This will create tiles from the **dataset/wind_magnitude_reduced.nc** file into *./cache*
+
+* Run it (this will create tiles from the **dataset/wind_magnitude_reduced.nc** file into *./cache*)
+
+```
+cargo run --release
+```
 
 * Finally, you can look the exported Tiles in your browser by openning **viewer.html**
+
