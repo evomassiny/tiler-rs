@@ -1,11 +1,13 @@
 extern crate netcdf;
 extern crate image;
 mod tile;
+mod colorbar;
 mod tiledata;
 mod dataset;
 mod renderer;
 use renderer::Renderer;
 use dataset::Dataset;
+use colorbar::Colorbar;
 use tile::Tile;
 use std::fs::create_dir_all;
 
@@ -25,13 +27,13 @@ fn main() {
         dataset_path
     ).unwrap();
 
-    let (value_min, value_max) = (0., 12.);
-    println!("Creating a grayscale renderer");
-    let renderer = Renderer::from_dataset(dataset, value_min, value_max).unwrap();
+    let (value_min, value_max) = (0., 20.);
+    println!("Creating a RdYlBu_r renderer");
+    let renderer = Renderer::from_dataset(dataset, value_min, value_max, Colorbar::RdYlBu_r).unwrap();
 
     let mut max: u16 = 2;
     // iter Zoom level
-    for z in 1..5 {
+    for z in 0..5 {
         println!("Rendering zoom level {}", &z);
         // iter X tile coordinates
         for x in 0..max {

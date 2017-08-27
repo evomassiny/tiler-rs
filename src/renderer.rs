@@ -2,10 +2,11 @@ use std::path::Path;
 use dataset::Dataset;
 use tiledata::{TILE_SIZE};
 use tile::Tile;
+use colorbar::{Colorbar,rgb};
 use image;
 
 pub struct ImgTile {
-    pub pixels: [u8; 2 * TILE_SIZE * TILE_SIZE],
+    pub pixels: [u8; 4 * TILE_SIZE * TILE_SIZE],
     pub x: u16,
     pub y: u16,
     pub z: u16,
@@ -17,7 +18,7 @@ impl ImgTile {
             &self.pixels,
             TILE_SIZE as u32,
             TILE_SIZE as u32,
-            image::GrayA(8)
+            image::RGBA(8)
         );
     }
 }
@@ -26,10 +27,11 @@ pub struct Renderer {
     fill_value: f32,
     max_value: f32,
     min_value: f32,
+    colorbar: Colorbar,
     dataset: Dataset
 }
 impl Renderer {
-    pub fn from_dataset(dataset: Dataset, min: f32, max: f32) -> Result<Self, String> {
+    pub fn from_dataset(dataset: Dataset, min: f32, max: f32, colorbar: Colorbar) -> Result<Self, String> {
         let fill_value = dataset.get_fill_value().unwrap_or(-1_f32);
         // TODO: read values from the dataset
         Ok(
@@ -37,14 +39,24 @@ impl Renderer {
                 fill_value: fill_value,
                 min_value: min,
                 max_value: max,
+                colorbar: colorbar,
                 dataset: dataset
             }
         )
     }
 
-    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE]) -> [u8; 2 * TILE_SIZE * TILE_SIZE] {
-        let mut colors = [0u8; 2* TILE_SIZE * TILE_SIZE];
-        let scale = |x| ((x - self.min_value) / (self.max_value - self.min_value));
+    fn to_scale(&self, value: f32) -> f32 {
+        if value <= self.min_value {
+            return 0.;
+        } else if value >= self.max_value {
+            return 1.;
+        } else {
+            return (value -self. min_value) / (self.max_value - self.min_value);
+        }
+    }
+
+    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
+        let mut colors = [0u8; 4* TILE_SIZE * TILE_SIZE];
         let mut count: usize = 0;
         // iter latitude in reverse, to fit the image X,Y orientation
         for i_lat in (0..TILE_SIZE).rev() {
@@ -53,12 +65,17 @@ impl Renderer {
                     // mask fill_values
                     colors[count] = 0;
                     colors[count + 1] = 0;
+                    colors[count + 2] = 0;
+                    colors[count + 3] = 0;
                 } else {
-                    colors[count] = ((scale(values[i_lat][i_lon]) * 255.) as u8) % 255;
-                    colors[count + 1] = 255;
-                    //println!("{}: {}", values[i_lat][i_lon], colors[count]);
+                    let value = self.to_scale(values[i_lat][i_lon]);
+                    let rgb = rgb(value, &self.colorbar);
+                    colors[count] = rgb[0];
+                    colors[count + 1] = rgb[1];
+                    colors[count + 2] = rgb[2];
+                    colors[count + 3] = 255;
                 }
-                count += 2;
+                count += 4;
             }
         }
         colors
