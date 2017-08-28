@@ -2,7 +2,7 @@ use std::path::Path;
 use dataset::Dataset;
 use tiledata::{TILE_SIZE};
 use tile::Tile;
-use colorbar::{Colorbar,rgb};
+use colormap::{ColorMap,rgb};
 use image;
 
 pub struct ImgTile {
@@ -27,11 +27,11 @@ pub struct Renderer {
     fill_value: f32,
     max_value: f32,
     min_value: f32,
-    colorbar: Colorbar,
+    color_map: ColorMap,
     dataset: Dataset
 }
 impl Renderer {
-    pub fn from_dataset(dataset: Dataset, min: f32, max: f32, colorbar: Colorbar) -> Result<Self, String> {
+    pub fn from_dataset(dataset: Dataset, min: f32, max: f32, color_map: ColorMap) -> Result<Self, String> {
         let fill_value = dataset.get_fill_value().unwrap_or(-1_f32);
         // TODO: read values from the dataset
         Ok(
@@ -39,7 +39,7 @@ impl Renderer {
                 fill_value: fill_value,
                 min_value: min,
                 max_value: max,
-                colorbar: colorbar,
+                color_map: color_map,
                 dataset: dataset
             }
         )
@@ -69,7 +69,7 @@ impl Renderer {
                     colors[count + 3] = 0;
                 } else {
                     let value = self.to_scale(values[i_lat][i_lon]);
-                    let rgb = rgb(value, &self.colorbar);
+                    let rgb = rgb(value, &self.color_map);
                     colors[count] = rgb[0];
                     colors[count + 1] = rgb[1];
                     colors[count + 2] = rgb[2];

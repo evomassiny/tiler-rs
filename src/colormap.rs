@@ -1,4 +1,4 @@
-// data defining a RdYlBu Colorbar (taken from the matplotlib python
+// data defining a RdYlBu ColorMap (taken from the matplotlib python
 // module)
 const RdYlBu_data: [[f32; 3]; 11] = [
     [0.6470588235294118 , 0.0                 , 0.14901960784313725],
@@ -16,12 +16,12 @@ const RdYlBu_data: [[f32; 3]; 11] = [
 
 /// Defines a values to color association
 #[allow(non_camel_case_types)]
-pub enum Colorbar {
-    /// black to gray colorbar
+pub enum ColorMap {
+    /// black to gray colorMap
     Grayscale,
-    /// Red Yellow Blue colorbar
+    /// Red Yellow Blue colorMap
     RdYlBu,
-    /// Reversed Red Yellow Blue Colorbar
+    /// Reversed Red Yellow Blue ColorMap
     RdYlBu_r,
 }
 
@@ -61,7 +61,7 @@ fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
 
 /**
  * Turns a [0; 1] f32 value into pixel colors,
- * Using the RdYlBu colorbar
+ * Using the RdYlBu ColorMap
  */
 #[allow(non_camel_case_types)]
 fn value_to_RdYlBu(value: f32) -> [u8; 3] {
@@ -70,7 +70,7 @@ fn value_to_RdYlBu(value: f32) -> [u8; 3] {
 
 /**
  * Turns a [0; 1] f32 value into pixel colors,
- * Using the reversed RdYlBu colorbar
+ * Using the reversed RdYlBu ColorMap
  */
 #[allow(non_camel_case_types)]
 fn value_to_RdYlBu_r(value: f32) -> [u8; 3] {
@@ -79,12 +79,12 @@ fn value_to_RdYlBu_r(value: f32) -> [u8; 3] {
 
 /**
  * Returns a pixel color from a [0; 1] f32 value
- * and a Colorbar variant
+ * and a ColorMap variant
  */
-pub fn rgb(value: f32, colorbar: &Colorbar) -> [u8; 3] {
-    match *colorbar {
-        Colorbar::Grayscale => { value_to_grayscale(value) },
-        Colorbar::RdYlBu => { value_to_RdYlBu(value) },
-        Colorbar::RdYlBu_r => { value_to_RdYlBu_r(value) },
+pub fn rgb(value: f32, color_map: &ColorMap) -> [u8; 3] {
+    match *color_map {
+        ColorMap::Grayscale => { value_to_grayscale(value) },
+        ColorMap::RdYlBu => { value_to_RdYlBu(value) },
+        ColorMap::RdYlBu_r => { value_to_RdYlBu_r(value) },
     }
 }

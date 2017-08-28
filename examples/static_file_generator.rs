@@ -1,26 +1,16 @@
-extern crate netcdf;
-extern crate image;
-mod tile;
-mod colorbar;
-mod tiledata;
-mod dataset;
-mod renderer;
-use renderer::Renderer;
-use dataset::Dataset;
-use colorbar::Colorbar;
-use tile::Tile;
+extern crate tiler;
 use std::fs::create_dir_all;
 
 fn main() {
-    let cache_path = "./cache/";
+    let cache_path = "./examples_data/cache/";
     // The dataset must :
     //  - use the WGS84 coordinate system
     //  - have its longitude and latitiude sorted in ascending order
     //  - have its main variable expressed in (lat, lon)
-    let dataset_path = "./dataset/wind_magnitude_reduced.nc";
+    let dataset_path = "./examples_data/wind_magnitude_reduced.nc";
 
-    println!("Openning dataset");
-    let dataset = Dataset::new(
+    println!("Openning dataset {}", &dataset_path);
+    let dataset = tiler::Dataset::new(
         "latitude", 
         "longitude",
         "wind_magnitude",
@@ -29,7 +19,12 @@ fn main() {
 
     let (value_min, value_max) = (0., 20.);
     println!("Creating a RdYlBu_r renderer");
-    let renderer = Renderer::from_dataset(dataset, value_min, value_max, Colorbar::RdYlBu_r).unwrap();
+    let renderer = tiler::Renderer::from_dataset(
+        dataset,        // input dataset
+        value_min,      // minimum value of the colorbar
+        value_max,      // maximum value of the colorbar 
+        tiler::ColorMap::RdYlBu_r   // Red Yellow Bleu colormap
+    ).unwrap();
 
     let mut max: u16 = 2;
     // iter Zoom level
@@ -43,7 +38,7 @@ fn main() {
                     // iter Y tile coordinates
                     for y in 0..max {
                         // create a Tile using x, y, z
-                        let tile = Tile {x: x, y:y, z:z };
+                        let tile = tiler::Tile {x: x, y:y, z:z };
                         let tile_path = format!("{}/{}.png", &tile_dir, &y);
                         
                         // render it into a png
@@ -58,4 +53,5 @@ fn main() {
         }
         max *= 2;
     }
+    println!("You show see the result by opening ./examples_data/viewer.html with your browser.");
 }
