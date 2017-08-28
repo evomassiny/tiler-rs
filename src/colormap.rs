@@ -1,5 +1,4 @@
-// data defining a RdYlBu ColorMap (taken from the matplotlib python
-// module)
+// data defining a RdYlBu ColorMap (taken from the matplotlib python module)
 const RdYlBu_data: [[f32; 3]; 11] = [
     [0.6470588235294118 , 0.0                 , 0.14901960784313725],
     [0.84313725490196079, 0.18823529411764706 , 0.15294117647058825],
@@ -14,6 +13,21 @@ const RdYlBu_data: [[f32; 3]; 11] = [
     [0.19215686274509805, 0.21176470588235294 , 0.58431372549019611]
 ];
 
+// data defining a BrBG ColorMap (taken from the matplotlib python module)
+const BrBG_data: [[f32; 3]; 11] = [
+    [0.32941176470588235,  0.18823529411764706,  0.0196078431372549 ],
+    [0.5490196078431373 ,  0.31764705882352939,  0.0392156862745098 ],
+    [0.74901960784313726,  0.50588235294117645,  0.17647058823529413],
+    [0.87450980392156863,  0.76078431372549016,  0.49019607843137253],
+    [0.96470588235294119,  0.90980392156862744,  0.76470588235294112],
+    [0.96078431372549022,  0.96078431372549022,  0.96078431372549022],
+    [0.7803921568627451 ,  0.91764705882352937,  0.89803921568627454],
+    [0.50196078431372548,  0.80392156862745101,  0.75686274509803919],
+    [0.20784313725490197,  0.59215686274509804,  0.5607843137254902 ],
+    [0.00392156862745098,  0.4                ,  0.36862745098039218],
+    [0.0                ,  0.23529411764705882,  0.18823529411764706]
+];
+
 /// Defines a values to color association
 #[allow(non_camel_case_types)]
 pub enum ColorMap {
@@ -23,6 +37,10 @@ pub enum ColorMap {
     RdYlBu,
     /// Reversed Red Yellow Blue ColorMap
     RdYlBu_r,
+    /// Brown to Green
+    BrBG,
+    /// Brown to Green, reversed
+    BrBG_r,
 }
 
 fn value_to_grayscale(value: f32) -> [u8; 3] {
@@ -60,31 +78,23 @@ fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
 }
 
 /**
- * Turns a [0; 1] f32 value into pixel colors,
- * Using the RdYlBu ColorMap
- */
-#[allow(non_camel_case_types)]
-fn value_to_RdYlBu(value: f32) -> [u8; 3] {
-    return value_to_color(value, &RdYlBu_data, false);
-}
-
-/**
- * Turns a [0; 1] f32 value into pixel colors,
- * Using the reversed RdYlBu ColorMap
- */
-#[allow(non_camel_case_types)]
-fn value_to_RdYlBu_r(value: f32) -> [u8; 3] {
-    return value_to_color(value, &RdYlBu_data, true);
-}
-
-/**
  * Returns a pixel color from a [0; 1] f32 value
  * and a ColorMap variant
  */
 pub fn rgb(value: f32, color_map: &ColorMap) -> [u8; 3] {
     match *color_map {
         ColorMap::Grayscale => { value_to_grayscale(value) },
-        ColorMap::RdYlBu => { value_to_RdYlBu(value) },
-        ColorMap::RdYlBu_r => { value_to_RdYlBu_r(value) },
+        ColorMap::RdYlBu => { 
+            value_to_color(value, &RdYlBu_data, false)
+        },
+        ColorMap::RdYlBu_r => {
+            value_to_color(value, &RdYlBu_data, true)
+        },
+        ColorMap::BrBG => { 
+            value_to_color(value, &BrBG_data, false)
+        },
+        ColorMap::BrBG_r => {
+            value_to_color(value, &BrBG_data, true)
+        },
     }
 }
