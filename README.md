@@ -39,7 +39,7 @@ fn main()  {
         "latitude",         // Name of the latitude dimension
         "longitude",        // Name of the longitude dimension
         "wind_magnitude",   // Name of the latitude dimension
-        "./examples_data/wind_magnitude_reduced.nc" // name of your dataset
+        "./examples_data/wind_magnitude_reduced.nc" // Path to a dataset
     ).unwrap();
 
     // Create a renderer
@@ -61,6 +61,9 @@ fn main()  {
 }
 
 ```
+By running it using the provided exemple dataset, you will create the following  png file `tile_0_0_0.png`:
+![exemple generated image](./examples_data/tile_0_0_0.png)
+(The dataset itself comes from the NOAA CFS).
 
 ## Dataset limitations
 For this library to work, you need to provide a netCDF file:
