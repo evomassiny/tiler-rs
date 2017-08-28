@@ -63,7 +63,8 @@ fn main()  {
 ```
 By running it using the provided exemple dataset, you will create the following  png file `tile_0_0_0.png`:
 ![exemple generated image](./examples_data/tile_0_0_0.png)
-(The dataset itself comes from the NOAA CFS).
+
+The dataset itself represents the wind speed magnitude on a particular time (03:00 01/08/2017), it comes from the [NOAA](http://www.noaa.gov/) Climat Forecast System.
 
 ## Dataset limitations
 For this library to work, you need to provide a netCDF file:
