@@ -6,17 +6,17 @@ This is a weekend project, don't expect to much of it.
 ## Build
 
 * You need to have the libnetcdf installed, on debian-based distro :
-```
+```bash
 sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
 ```
 
 * Then you should be able to build it using the rust package manager *cargo*:
-```
+```bash
 cargo build --release
 ```
 
 * Run a test example (this will create tiles from the **examples_data/wind_magnitude_reduced.nc** file into *examples_data/cache*)
-```
+```bash
 cargo run --release --example static_file_generator
 ```
 
@@ -30,7 +30,7 @@ tiler = { git = "https://github.com/evomassiny/tiler-rs.git", branch = "master" 
 ```
 
 * In your code :
-```
+```rust
 extern crate tiler;
 
 fn main()  {
