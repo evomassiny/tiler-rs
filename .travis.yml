@@ -1,0 +1,18 @@
+language: rust
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - libhdf5-serial-dev
+      - netcdf-bin
+      - libnetcdf-dev
+script:
+  - cargo build --verbose
+  - cargo test -j1 --verbose
