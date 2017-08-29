@@ -1,5 +1,5 @@
 // data defining a RdYlBu ColorMap (taken from the matplotlib python module)
-const RdYlBu_data: [[f32; 3]; 11] = [
+const RD_TL_BU_DATA: [[f32; 3]; 11] = [
     [0.6470588235294118 , 0.0                 , 0.14901960784313725],
     [0.84313725490196079, 0.18823529411764706 , 0.15294117647058825],
     [0.95686274509803926, 0.42745098039215684 , 0.2627450980392157 ],
@@ -14,7 +14,7 @@ const RdYlBu_data: [[f32; 3]; 11] = [
 ];
 
 // data defining a BrBG ColorMap (taken from the matplotlib python module)
-const BrBG_data: [[f32; 3]; 11] = [
+const BR_BG_DATA: [[f32; 3]; 11] = [
     [0.32941176470588235,  0.18823529411764706,  0.0196078431372549 ],
     [0.5490196078431373 ,  0.31764705882352939,  0.0392156862745098 ],
     [0.74901960784313726,  0.50588235294117645,  0.17647058823529413],
@@ -49,7 +49,7 @@ fn value_to_grayscale(value: f32) -> [u8; 3] {
 }
 /**
  * Returns pixel colors from a value (between 0 and 1),
- * It linearly interpolate the color between the colors defindes in `data`
+ * It linearly interpolate the color between the colors defined in `data`
  */
 fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
     // reverse the value if asked
@@ -69,9 +69,10 @@ fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
             rgb[i] = (data[data.len() -1][i] * 255.) as u8; 
         }
     } else {
-        // perform the interpolation
+        // perform the interpolation for each pixel color (RGB)
         for i in 0..rgb.len() {
-            rgb[i] = ( ( data[idx][i] * (1. - weight) + weight * data[idx + 1][i] ) * 255.) as u8;
+            // this is basically a weighted mean
+            rgb[i] = ((data[idx][i] * (1. - weight) + weight * data[idx + 1][i]) * 255.) as u8;
         }
     }
     rgb
@@ -85,16 +86,35 @@ pub fn rgb(value: f32, color_map: &ColorMap) -> [u8; 3] {
     match *color_map {
         ColorMap::Grayscale => { value_to_grayscale(value) },
         ColorMap::RdYlBu => { 
-            value_to_color(value, &RdYlBu_data, false)
+            value_to_color(value, &RD_TL_BU_DATA, false)
         },
         ColorMap::RdYlBu_r => {
-            value_to_color(value, &RdYlBu_data, true)
+            value_to_color(value, &RD_TL_BU_DATA, true)
         },
         ColorMap::BrBG => { 
-            value_to_color(value, &BrBG_data, false)
+            value_to_color(value, &BR_BG_DATA, false)
         },
         ColorMap::BrBG_r => {
-            value_to_color(value, &BrBG_data, true)
+            value_to_color(value, &BR_BG_DATA, true)
         },
     }
+}
+
+#[test]
+fn test_colormap_interpolation() {
+    let data: [[f32; 3]; 4] = [
+        [0., 0., 0.],
+        [1./3., 1./3., 1./3.],
+        [2./3., 2./3., 2./3.],
+        [1., 1., 1.],
+    ];
+    // test interpolation for 0, 0.5 and 1
+    assert_eq!(value_to_color(0., &data, false), [0u8; 3]);
+    assert_eq!(value_to_color(1., &data, false), [255u8; 3]);
+    assert_eq!(value_to_color(0.5, &data, false), [(255 / 2) as u8; 3]);
+    
+    // test interpolation for 0, 0.5 and 1 with revesed colormap
+    assert_eq!(value_to_color(0., &data, true), [255u8; 3]);
+    assert_eq!(value_to_color(1., &data, true), [0u8; 3]);
+    assert_eq!(value_to_color(0.5, &data, true), [(255 / 2) as u8; 3]);
 }
