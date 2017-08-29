@@ -142,7 +142,7 @@ impl Dataset {
 
 #[test]
 fn dataset_creation() {
-    let dataset_path = "./dataset/wind_magnitude_reduced.nc";
+    let dataset_path = "./examples_data/wind_magnitude_reduced.nc";
     let dataset = Dataset::new(
         "latitude", 
         "longitude",
@@ -154,7 +154,7 @@ fn dataset_creation() {
 
 #[test]
 fn test_data_fetch() {
-    let dataset_path = "./dataset/wind_magnitude_reduced.nc";
+    let dataset_path = "./examples_data/wind_magnitude_reduced.nc";
     let dataset = Dataset::new(
         "latitude", 
         "longitude",
