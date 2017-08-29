@@ -1,3 +1,5 @@
+![test status](https://travis-ci.org/evomassiny/tiler-rs.svg?branch=master)
+
 # tiler-rs
 This simple rust crate creates Web Mercator Tiles from netCDF datasets.
 
