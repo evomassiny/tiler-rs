@@ -2,6 +2,7 @@ use std::path::Path;
 use dataset::Dataset;
 use tiledata::{TILE_SIZE};
 use tile::Tile;
+use tiledata::TileData;
 use colormap::{ColorMap,rgb};
 use image;
 
@@ -93,6 +94,31 @@ impl Renderer {
                 z: tile.z,
             }
         )
+    }
+
+    fn render_n_tiledata_zoom(&self, data: &TileData, level: u8) -> Vec<ImgTile> {
+        let mut imgs: Vec<ImgTile> = Vec::new();
+        imgs.push(
+            ImgTile {
+                pixels: self.values_to_colors(data.to_tile_grid()),
+                x: data.tile.x,
+                y: data.tile.y,
+                z: data.tile.z,
+            }
+        );
+
+        if level > 0 {
+            for sub_data in data.sub_tiledata() {
+                imgs.extend(self.render_n_tiledata_zoom(&sub_data, level -1));
+            }
+        }
+        return imgs;
+
+    }
+
+    pub fn render_n_level_tile(&self, tile: &Tile, level: u8) -> Result<Vec<ImgTile>, String> {
+        let tile_data = self.dataset.get_tile_data(tile)?;
+        return Ok(self.render_n_tiledata_zoom(&tile_data, level));
     }
 
 

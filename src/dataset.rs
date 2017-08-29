@@ -132,7 +132,8 @@ impl Dataset {
                     lon: lon,
                     lat: lat,
                     values: tile_values,
-                    bbox: tile.xy_bounds()
+                    bbox: tile.xy_bounds(),
+                    tile: Tile {x: tile.x, y: tile.y, z: tile.z }
                 }
             );
         }
