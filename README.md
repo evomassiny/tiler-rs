@@ -3,7 +3,7 @@
 # tiler-rs
 This simple rust crate creates Web Mercator Tiles from netCDF datasets.
 
-This is a weekend project, don't expect to much of it.
+This is a weekend project, don't expect too much of it.
 
 ## Build
 
