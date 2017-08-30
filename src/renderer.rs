@@ -96,6 +96,8 @@ impl Renderer {
         )
     }
 
+    /// This function render a Tildata and its `level` sub-levels into ImgTile,
+    /// by RECURSIVELY calling itself using `data.sub_tiledata`.
     fn render_n_tiledata_zoom(&self, data: &TileData, level: u8) -> Vec<ImgTile> {
         let mut imgs: Vec<ImgTile> = Vec::new();
         imgs.push(
@@ -116,6 +118,9 @@ impl Renderer {
 
     }
 
+    /// This function renders a tile and its `level` sub-levels into ImgTile.
+    /// It only extracts values from the dataset once, and recursively renders `level` levels 
+    /// of tiles using those values.
     pub fn render_n_level_tile(&self, tile: &Tile, level: u8) -> Result<Vec<ImgTile>, String> {
         let tile_data = self.dataset.get_tile_data(tile)?;
         return Ok(self.render_n_tiledata_zoom(&tile_data, level));

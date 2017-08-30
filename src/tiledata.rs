@@ -1,4 +1,5 @@
 use tile::{Tile,Bbox};
+use std::cmp::min;
 
 pub const TILE_SIZE: usize = 256;
 
@@ -83,6 +84,7 @@ impl TileData {
         return self.values[self.lon.len() * lat_idx + lon_idx];
     }
 
+    /// Creates up to 4 tiles, representing the n+1 zoom level using self.values
     pub fn sub_tiledata(&self) -> Vec<Self> {
         let mut sub_tiledata: Vec<Self> = Vec::new();
         let base_x = self.tile.x * 2;
@@ -127,17 +129,14 @@ impl TileData {
                     }
                 }
 
-                let subset_lat: Vec<f64> = self.lat[i_lat_min..(i_lat_max +1)].to_vec();
-                let subset_lon: Vec<f64> = self.lon[i_lon_min..(i_lon_max +1)].to_vec();
+                // Extract lat, lon and values using the computed indices
+                let subset_lat: Vec<f64> = self.lat[i_lat_min..min(i_lat_max +1, self.lat.len() -1)].to_vec();
+                let subset_lon: Vec<f64> = self.lon[i_lon_min..min(i_lon_max +1, self.lon.len() -1)].to_vec();
                 let mut subset_values: Vec<f32> = Vec::with_capacity(subset_lat.len() * subset_lon.len());
-                let mut lat_idx: usize = 0;
-                for i_lat in i_lat_min..(i_lat_max + 1) {
-                    let mut lon_idx: usize = 0;
-                    for i_lon in i_lon_min..(i_lon_max + 1) {
-                        subset_values[lat_idx * subset_lat.len() + lon_idx] = self.value_at(i_lat, i_lon);
-                        lon_idx += 1;
+                for i_lat in i_lat_min..min(i_lat_max +1, self.lat.len() -1) {
+                    for i_lon in i_lon_min..min(i_lon_max +1, self.lon.len() -1) {
+                        subset_values.push(self.value_at(i_lat, i_lon));
                     }
-                    lat_idx += 1;
                 }
                 
                 sub_tiledata.push(
