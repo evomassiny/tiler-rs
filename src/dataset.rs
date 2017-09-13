@@ -120,7 +120,15 @@ impl Dataset {
                 i_lon_max - i_lon_min + 1
             ];
 
-            let tile_values = variable.values_at(&[i_lat_min, i_lon_min], &slice_size)?;
+            let var_values = variable.values_at(&[i_lat_min, i_lon_min], &slice_size)?;
+            // Filter fill_values
+            let tile_values: Vec<Option<f32>> = match self.get_fill_value() {
+                Some(fill_value) => { var_values.iter().map(|v| {
+                        if *v == fill_value { None } else { Some(*v) }
+                    }).collect()
+                },
+                None => { var_values.iter().map(|v| Some(*v)).collect()}
+            };
             // Convert longitude and latitude into meters
             let lon: Vec<f64> = self.lon[i_lon_min..i_lon_max + 1]
                 .iter().map(|x| lon_wgs84_to_meters(*x)).collect();

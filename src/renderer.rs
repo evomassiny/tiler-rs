@@ -25,7 +25,6 @@ impl ImgTile {
 }
 
 pub struct Renderer {
-    fill_value: f32,
     max_value: f32,
     min_value: f32,
     color_map: ColorMap,
@@ -33,11 +32,9 @@ pub struct Renderer {
 }
 impl Renderer {
     pub fn from_dataset(dataset: Dataset, min: f32, max: f32, color_map: ColorMap) -> Result<Self, String> {
-        let fill_value = dataset.get_fill_value().unwrap_or(-1_f32);
         // TODO: read values from the dataset
         Ok(
             Self {
-                fill_value: fill_value,
                 min_value: min,
                 max_value: max,
                 color_map: color_map,
@@ -56,25 +53,27 @@ impl Renderer {
         }
     }
 
-    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
+    fn values_to_colors(&self, values: [[Option<f32>; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
         let mut colors = [0u8; 4* TILE_SIZE * TILE_SIZE];
         let mut count: usize = 0;
         // iter latitude in reverse, to fit the image X,Y orientation
         for i_lat in (0..TILE_SIZE).rev() {
             for i_lon in 0..TILE_SIZE {
-                if values[i_lat][i_lon] == self.fill_value {
-                    // mask fill_values
-                    colors[count] = 0;
-                    colors[count + 1] = 0;
-                    colors[count + 2] = 0;
-                    colors[count + 3] = 0;
-                } else {
-                    let value = self.to_scale(values[i_lat][i_lon]);
-                    let rgb = rgb(value, &self.color_map);
-                    colors[count] = rgb[0];
-                    colors[count + 1] = rgb[1];
-                    colors[count + 2] = rgb[2];
-                    colors[count + 3] = 255;
+                match values[i_lat][i_lon] {
+                    None => {
+                        colors[count] = 0;
+                        colors[count + 1] = 0;
+                        colors[count + 2] = 0;
+                        colors[count + 3] = 0;
+                    },
+                    Some(value) => {
+                        let scaled_value = self.to_scale(value);
+                        let rgb = rgb(scaled_value, &self.color_map);
+                        colors[count] = rgb[0];
+                        colors[count + 1] = rgb[1];
+                        colors[count + 2] = rgb[2];
+                        colors[count + 3] = 255;
+                    }
                 }
                 count += 4;
             }

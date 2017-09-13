@@ -10,7 +10,7 @@ pub struct TileData {
     /// Must be expressed in meters, in ascending order
     pub lon: Vec<f64>,
     /// Values must be a flattened array (lat, lon)
-    pub values: Vec<f32>,
+    pub values: Vec<Option<f32>>,
     pub bbox: Bbox,
     pub tile: Tile,
 }
@@ -19,9 +19,11 @@ impl TileData {
     /**
      * regrid self.values into a TILE_SIZE x TILE_SIZE grid.
      */
-    pub fn to_tile_grid(&self) -> [[f32; TILE_SIZE]; TILE_SIZE] {
+    pub fn to_tile_grid(&self) -> [[Option<f32>; TILE_SIZE]; TILE_SIZE] {
 
-        // fetch nearest latitudes indices
+        // fetch nearest latitudes indices:
+        //   loop on GRID latitudes, and for each of those, find the closest one in self.lat,
+        //   and store its index in an array (lat_ids)
         let mut lat_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
         let lat_inc: f64 = (self.bbox.north - self.bbox.south) / (TILE_SIZE as f64);
 
@@ -47,6 +49,8 @@ impl TileData {
         }
 
         // fetch nearest longitude indices
+        //   loop on the tile grid longitude , and for each of those, find the closest one in self.lon,
+        //   and store its index in an array (lon_ids)
         let mut lon_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
         let lon_inc: f64 = (self.bbox.east - self.bbox.west) / (TILE_SIZE as f64);
 
@@ -69,18 +73,51 @@ impl TileData {
             current_lon += lon_inc;
         }
 
+        // Exclude coordinates outside the dataset bounding box
+        let mut data_lat_min: usize = 0;
+        let mut boundary = self.bbox.south + lat_inc * 1.5;
+        while self.lat[lat_ids[data_lat_min]] > boundary && data_lat_min < (lat_ids.len() - 1) {
+            boundary += lat_inc;
+            data_lat_min += 1;
+        }
+        let mut data_lat_max: usize = lat_ids.len() - 1;
+        boundary = self.bbox.north - lat_inc * 1.5;
+        while self.lat[lat_ids[data_lat_max]] < boundary && data_lat_max > 0 {
+            boundary -= lat_inc;
+            data_lat_max -= 1;
+        }
+        let mut data_lon_min: usize = 0;
+        boundary = self.bbox.west + lon_inc * 1.5;
+        while self.lon[lon_ids[data_lon_min]] > boundary && data_lon_min < (lon_ids.len() - 1) {
+            boundary += lon_inc;
+            data_lon_min += 1;
+        }
+        let mut data_lon_max: usize = lon_ids.len() - 1;
+        boundary = self.bbox.east - lon_inc * 1.5;
+        while self.lon[lon_ids[data_lon_max]] < boundary && data_lon_max > 0 {
+            boundary -= lon_inc;
+            data_lon_max -= 1;
+        }
+
         // pick values using precomputed indices
-        let mut values = [[0_f32; TILE_SIZE]; TILE_SIZE];
+        let mut values: [[Option<f32>; TILE_SIZE]; TILE_SIZE] = [[None; TILE_SIZE]; TILE_SIZE];
         for i_lat in 0..TILE_SIZE {
             for i_lon in 0..TILE_SIZE {
-                values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
+                if i_lat < data_lat_min 
+                    || i_lat > data_lat_max 
+                    || i_lon < data_lon_min 
+                    || i_lon > data_lon_max {
+                    values[i_lat][i_lon] = None;
+                } else {
+                    values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
+                }
             }
         }
         values
     }
 
     /// Return the value of self.values as if it was a bi-dimensional array.
-    fn value_at(&self, lat_idx: usize, lon_idx: usize) -> f32 {
+    fn value_at(&self, lat_idx: usize, lon_idx: usize) -> Option<f32> {
         return self.values[self.lon.len() * lat_idx + lon_idx];
     }
 
@@ -132,7 +169,7 @@ impl TileData {
                 // Extract lat, lon and values using the computed indices
                 let subset_lat: Vec<f64> = self.lat[i_lat_min..min(i_lat_max +1, self.lat.len() -1)].to_vec();
                 let subset_lon: Vec<f64> = self.lon[i_lon_min..min(i_lon_max +1, self.lon.len() -1)].to_vec();
-                let mut subset_values: Vec<f32> = Vec::with_capacity(subset_lat.len() * subset_lon.len());
+                let mut subset_values: Vec<Option<f32>> = Vec::with_capacity(subset_lat.len() * subset_lon.len());
                 for i_lat in i_lat_min..min(i_lat_max +1, self.lat.len() -1) {
                     for i_lon in i_lon_min..min(i_lon_max +1, self.lon.len() -1) {
                         subset_values.push(self.value_at(i_lat, i_lon));
