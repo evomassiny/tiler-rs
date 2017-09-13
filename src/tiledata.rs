@@ -190,29 +190,3 @@ impl TileData {
         sub_tiledata
     }
 }
-
-#[test]
-fn nearest_interp() {
-    let tile_data = TileData {
-        lat: vec![1., 2., 3.],
-        lon: vec![0., 1., 2.],
-        values: vec![0., 0., 0., 0., 2., 0., 0., 0., 0.],
-        bbox: Bbox {
-            west: 0.5001,
-            south: 1.5001,
-            east: 1.4999,
-            north: 2.4999,
-        }, 
-        tile: Tile { x: 1, y:1, z: 1 }    // dummies
-    };
-    let grid = tile_data.to_tile_grid();
-    for i_lat in 0..TILE_SIZE {
-        for i_lon in 0..TILE_SIZE {
-            assert_eq!(
-                grid[i_lat][i_lon], 2.,
-                "test ilat:{}, ilon:{}", i_lat, i_lon
-            );
-
-        }
-    }
-}
