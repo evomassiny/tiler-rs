@@ -3,6 +3,7 @@ use netcdf::file::File as NcFile;
 use tile::{Tile,LonLatBbox,lat_wgs84_to_meters,lon_wgs84_to_meters};
 use tiledata::TileData;
 
+/// This Struct provides access to the data within a netCDF file.
 pub struct Dataset {
     lat: Vec<f64>,
     lon: Vec<f64>,
@@ -11,8 +12,24 @@ pub struct Dataset {
 }
 
 impl Dataset {
-    pub fn new(latitude: &str, longitude: &str, variable: &str, file_name: &str) -> Result<Self,String> {
-        let file = netcdf::open(file_name)?;
+    /// Creates a Dataset instance from a path to a netCDF file, and the name of some required
+    /// variable.
+    ///
+    /// #Args
+    ///  * `latitude` name of the latitude variable
+    ///  * `longitude` name of the longitude variable
+    ///  * `variable` name of the variable to render
+    ///  * `file_path` path to the netCDF file.
+    ///
+    /// # netCDF Fformat expected
+    /// The netCDF file must comply to the following rules:
+    ///
+    /// * The longitude and latitude variable must be sorted in ascending order.
+    /// * The longitude and latitude variable must be projected in *WGS 84 (srs 4326)*.
+    /// * values of `variable` must be bi-dimensionals (lat, lon)
+    ///
+    pub fn new(latitude: &str, longitude: &str, variable: &str, file_path: &str) -> Result<Self,String> {
+        let file = netcdf::open(file_path)?;
         let lat: Vec<f64> = file.root.variables
             .get(latitude)
             .ok_or("No latitude")?

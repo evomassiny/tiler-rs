@@ -28,7 +28,10 @@ const BR_BG_DATA: [[f32; 3]; 11] = [
     [0.0                ,  0.23529411764705882,  0.18823529411764706]
 ];
 
-/// Defines a values to color association
+/// Defines a values to color association.
+///
+/// By convention, a `Foo_r` Colormap Variant represents the `Foo` colormap reversed.
+/// 
 #[allow(non_camel_case_types)]
 pub enum ColorMap {
     /// black to gray colorMap

@@ -3,6 +3,7 @@ use std::cmp::min;
 
 pub const TILE_SIZE: usize = 256;
 
+/// Holds data and provides methods to regrid data into a 256 x 256 grid.
 #[derive(Debug)]
 pub struct TileData {
     /// Must be expressed in meters, in ascending order
@@ -74,6 +75,7 @@ impl TileData {
         }
 
         // Exclude coordinates outside the dataset bounding box
+        //   (Check "how far" are the actual latitudes values from the requested ones (self.bbox))
         let mut data_lat_min: usize = 0;
         let mut boundary = self.bbox.south + lat_inc * 1.5;
         while self.lat[lat_ids[data_lat_min]] > boundary && data_lat_min < (lat_ids.len() - 1) {
@@ -86,6 +88,7 @@ impl TileData {
             boundary -= lat_inc;
             data_lat_max -= 1;
         }
+        //   (Check "how far" are the actual longitude values from the requested ones (self.bbox))
         let mut data_lon_min: usize = 0;
         boundary = self.bbox.west + lon_inc * 1.5;
         while self.lon[lon_ids[data_lon_min]] > boundary && data_lon_min < (lon_ids.len() - 1) {

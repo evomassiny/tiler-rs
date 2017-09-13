@@ -6,13 +6,21 @@ use tiledata::TileData;
 use colormap::{ColorMap,rgb};
 use image;
 
+/// This struct represents an image tile,
+/// it holds all the pixel values needed to build 
+/// an image file (PNG) from it.
 pub struct ImgTile {
+    /// Array of pixel values (flattened) 
     pub pixels: [u8; 4 * TILE_SIZE * TILE_SIZE],
+    /// Web mercator x coordinate of the tile
     pub x: u16,
+    /// Web mercator y coordinate of the tile
     pub y: u16,
+    /// Zoom level
     pub z: u16,
 }
 impl ImgTile {
+    /// Export the ImgTile as a PNG file.
     pub fn save(&self, path: &str) {
         let _ = image::save_buffer(
             &Path::new(path),
@@ -24,13 +32,22 @@ impl ImgTile {
     }
 }
 
+/// Provides convenient functions to render a `Dataset` instance into `ImgTile`s
 pub struct Renderer {
-    max_value: f32,
-    min_value: f32,
+    pub max_value: f32,
+    pub min_value: f32,
     color_map: ColorMap,
     dataset: Dataset
 }
 impl Renderer {
+    /** Create a `Renderer` instance from a dataset.
+     *
+     * #Args
+     * * `dataset`: A dataset instance (which wraps an netCDF file)
+     * * `min`: the minimum value of the colorbar
+     * * `max`: the maximum value of the colorbar
+     * * `color_map`: a ColorMap variant, which defines the *value* => *color* mapping
+     */
     pub fn from_dataset(dataset: Dataset, min: f32, max: f32, color_map: ColorMap) -> Result<Self, String> {
         // TODO: read values from the dataset
         Ok(
@@ -43,6 +60,10 @@ impl Renderer {
         )
     }
 
+    /**
+     * Scale `value` into a [0; 1] domain, 
+     * using the render `min_value`, and `max_value`.
+     */
     fn to_scale(&self, value: f32) -> f32 {
         if value <= self.min_value {
             return 0.;
@@ -53,34 +74,47 @@ impl Renderer {
         }
     }
 
+    /**
+     * Returns a pixel value (RGBA) from a value, according to the 
+     * renderer colormap, min_value and max_value.
+     */
+    pub fn value_to_rgba(&self, value: Option<f32>) -> [u8; 4] {
+        match value {
+            None => { [0u8, 0u8, 0u8, 0u8] },
+            Some(value) => {
+                let scaled_value = self.to_scale(value);
+                let rgb = rgb(scaled_value, &self.color_map);
+                [rgb[0], rgb[1], rgb[2], 255u8]
+            }
+        }
+    }
+
     fn values_to_colors(&self, values: [[Option<f32>; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
         let mut colors = [0u8; 4* TILE_SIZE * TILE_SIZE];
         let mut count: usize = 0;
         // iter latitude in reverse, to fit the image X,Y orientation
         for i_lat in (0..TILE_SIZE).rev() {
             for i_lon in 0..TILE_SIZE {
-                match values[i_lat][i_lon] {
-                    None => {
-                        colors[count] = 0;
-                        colors[count + 1] = 0;
-                        colors[count + 2] = 0;
-                        colors[count + 3] = 0;
-                    },
-                    Some(value) => {
-                        let scaled_value = self.to_scale(value);
-                        let rgb = rgb(scaled_value, &self.color_map);
-                        colors[count] = rgb[0];
-                        colors[count + 1] = rgb[1];
-                        colors[count + 2] = rgb[2];
-                        colors[count + 3] = 255;
-                    }
-                }
+                let rgba = self.value_to_rgba(values[i_lat][i_lon]);
+                colors[count + 0] = rgba[0];
+                colors[count + 1] = rgba[1];
+                colors[count + 2] = rgba[2];
+                colors[count + 3] = rgba[3];
                 count += 4;
             }
         }
         colors
     }
 
+    /**
+     * Render a Tile into an ImgTile.
+     * 
+     * #Details
+     *
+     * Extract values from the renderer dataset, 
+     * interpolate them into a TILE_SIZE * TILE_SIZE grid,
+     * and convert them into pixel values.
+     */
     pub fn render_tile(&self, tile: &Tile) -> Result<ImgTile, String> {
         let tile_data = self.dataset.get_tile_data(tile)?;
         let data = tile_data.to_tile_grid();
@@ -96,7 +130,7 @@ impl Renderer {
     }
 
     /// This function render a Tildata and its `level` sub-levels into ImgTile,
-    /// by RECURSIVELY calling itself using `data.sub_tiledata`.
+    /// by *RECURSIVELY* calling itself using `data.sub_tiledata`.
     fn render_n_tiledata_zoom(&self, data: &TileData, level: u8) -> Vec<ImgTile> {
         let mut imgs: Vec<ImgTile> = Vec::new();
         imgs.push(
