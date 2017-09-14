@@ -19,6 +19,7 @@ addons:
 script:
   - cargo build --verbose
   - cargo test --verbose
+  - travis-cargo doc
 after_success:
   - travis-cargo --only stable doc-upload
 env:
