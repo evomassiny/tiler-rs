@@ -1,16 +1,16 @@
 //!
 //! A netCDF to tile converter.
-//! This crate provides basic methods to exports a netCDF gridded datasets
-//! PNG tiles, suited for interactive web maps.
+//! This crate provides basic methods to export a netCDF gridded dataset
+//! into PNG tiles, suited for interactive web maps.
 //!
 //! # Usage
 //!
 //! In order to export a netCDF file into PNGs you need to create 2 objects:
 //!
 //! * A `Dataset` which hold informations about a netCDF file, such as:
-//!     * the longitude and latitude dimension name,
-//!     * the main variable name, (the one you which to render),
-//!     * the file path.
+//!     * the *longitude* and *latitude* dimension name,
+//!     * the main *variable name*, (the one you which to render),
+//!     * the netCDF file *path*.
 //! * A `Renderer` which provides convenient functions to render a `Dataset` 
 //! into tile images.
 //!

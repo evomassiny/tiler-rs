@@ -76,10 +76,15 @@ pub struct Bbox {
     /// meters
     pub north: f64,
 }
+
+/// This struct holds basic informations about a Tile.
 #[derive(Debug, PartialEq)]
 pub struct Tile {
+    /// `x` coordinate of a tile
     pub x: u16,
+    /// `y` coordinate of a tile
     pub y: u16,
+    /// zoom level, (from 0 to 19 included)
     pub z: u16,
 }
 impl Tile {
