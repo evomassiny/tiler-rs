@@ -21,6 +21,8 @@ cargo build --release
 ```bash
 cargo run --release --example static_file_generator
 ```
+## Documentation
+The crate documentation is available [here](https://evomassiny.github.io/tiler-rs/tiler/index.html).
 
 ## Usage
 Here is a simple example:
