@@ -8,20 +8,27 @@ rust:
 sudo: false
 
 before_script:
+    # Install travis-cargo, which is used to automatically upload the documentation
     - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 
 addons:
   apt:
     packages:
+       # Needed for rust-netcdf 
       - libhdf5-serial-dev
       - netcdf-bin
       - libnetcdf-dev
 script:
   - cargo build --verbose
   - cargo test --verbose
+  # build documentation
   - travis-cargo doc
 after_success:
+  # Automatically upload documentation to gh-pages
   - travis-cargo --only stable doc-upload
 env:
   global:
+      #override the default `--features unstable` used for the nightly branch
+      - TRAVIS_CARGO_NIGHTLY_FEATURE=nightly
+      # encrypted github token for doc upload 
       - secure: FPRrmMlxXwieyrBL4C6atGlTv8L6/dCvt9jRgJy+xhnW/KdtQwEOYHIq2IkBn/jDb5j9BR+7XacnAGlqim1lmUTVK04/Efh9HxPO/NQwk8mnrz3f+lOklEqgYngGXHQJE1YZUg+SjI2n5UnXyu3XP5SV3Rgidmm7yvPNuEgtOKg9SopoZ/eFRNN6J10K0mFERMMbX6B3JdFbesdnZ030cSXEB9T70bK2NH6jx6YZU7SvemPyFvN8ESiuWPHi4F92RdDsv/t8xBPbTqbG1wM0uNrdnnj2s8WDhJIG3BnM7orFs+1mv3hnR7v1hwYqNV13V0otkR/7Yy4Z4UekmVoM0J/Lwav6p7iXr3VucWLiWNgpvsjB+nMqJnMbaR1XmV8hm8Hb1HCQfBVjCNM8yV7c17pDyVbI6SW9YBTh/QGmZzcdkGk0PHRRURmYz4mpgvPLbVLdTT8/mU8MUxpJITmusXTAt1cktOPy8rdVncDb6TiF0CYw5VxEMJ5ACwH70iS1irJjB+tmU3mcOHbRwNqnF8/nBl4Ps6DAJMEmhJi2ssINRiQjaOctGpv4eL5sMk07Np6x6q8wqkpWEJ5sTYPl7f07SBH0EVG87sIo+qbF1OcU+Vo/6D3J+C13I92exmhTDn2UGucJf7WgemQX8rv5KBVgz2v/fAR6dlthzh+JM30=
