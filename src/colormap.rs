@@ -28,7 +28,7 @@ const BR_BG_DATA: [[f32; 3]; 11] = [
     [0.0                ,  0.23529411764705882,  0.18823529411764706]
 ];
 
-/// Defines a values to color association.
+/// Defines values to color association.
 ///
 /// By convention, a `Foo_r` Colormap Variant represents the `Foo` colormap reversed.
 /// 
@@ -50,6 +50,7 @@ fn value_to_grayscale(value: f32) -> [u8; 3] {
     let gray = ((value * 255.) % 255.) as u8;
     [gray, gray, gray]
 }
+
 /**
  * Returns pixel colors from a value (between 0 and 1),
  * It linearly interpolate the color between the colors defined in `data`

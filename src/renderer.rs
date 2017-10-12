@@ -34,7 +34,11 @@ impl ImgTile {
 
 /// Provides convenient functions to render a `Dataset` instance into `ImgTile`s
 pub struct Renderer {
+    /// Maximum value to represent. Every higher values (which isn't a fill value) will be 
+    /// rendered as if it was this `max_value`.
     pub max_value: f32,
+    /// Minimum value to represent. Every lower values (which isn't a fill value) will be 
+    /// rendered as if it was this `min_value`.
     pub min_value: f32,
     color_map: ColorMap,
     dataset: Dataset

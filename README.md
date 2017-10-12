@@ -1,9 +1,17 @@
 ![test status](https://travis-ci.org/evomassiny/tiler-rs.svg?branch=master)
 
-# tiler-rs
-This simple rust crate creates Web Mercator Tiles from netCDF datasets.
+# About
+This simple rust crate creates Web Mercator Tiles from netCDF datasets, suitable for Js viewer, such as leaflet.
+It uses the [rust-netcdf](https://github.com/mhiley/rust-netcdf) to manipulate netCDF files.
 
 This is a weekend project, don't expect too much of it.
+
+Comments and feedback are welcomed and appreciated.
+
+# Usage
+
+## Documentation
+The crate documentation is available [here](https://evomassiny.github.io/tiler-rs/tiler/index.html).
 
 ## Build
 
@@ -21,10 +29,8 @@ cargo build --release
 ```bash
 cargo run --release --example static_file_generator
 ```
-## Documentation
-The crate documentation is available [here](https://evomassiny.github.io/tiler-rs/tiler/index.html).
 
-## Usage
+## Example
 Here is a simple example:
 
 * In your Cargo.toml, add the following dependency:
@@ -80,3 +86,4 @@ For this library to work, you need to provide a netCDF file:
 * With bi-dimensional variables (latititude, longitude)
 
 * With sorted longitude and latitude dimensions (in ascending order).
+
