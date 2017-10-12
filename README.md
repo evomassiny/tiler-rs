@@ -2,6 +2,7 @@
 
 # About
 This simple rust crate creates Web Mercator Tiles from netCDF datasets, suitable for Js viewer, such as leaflet.
+
 It uses the [rust-netcdf](https://github.com/mhiley/rust-netcdf) to manipulate netCDF files.
 
 This is a weekend project, don't expect too much of it.
@@ -13,9 +14,9 @@ Comments and feedback are welcomed and appreciated.
 ## Documentation
 The crate documentation is available [here](https://evomassiny.github.io/tiler-rs/tiler/index.html).
 
-## Build
+## Requirements
 
-* You need to have the libnetcdf installed, on debian-based distro :
+* This crate uses a [libnetcdf wrapper](https://github.com/mhiley/rust-netcdf), so you need to have the libnetcdf installed, on debian-based distro :
 ```bash
 sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
 ```
