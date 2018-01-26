@@ -2,6 +2,7 @@ use netcdf;
 use netcdf::file::File as NcFile;
 use tile::{Tile,LonLatBbox,lat_wgs84_to_meters,lon_wgs84_to_meters};
 use tiledata::TileData;
+use std::f32;
 
 /// This Struct provides access to the data within a netCDF file.
 pub struct Dataset {
@@ -137,14 +138,18 @@ impl Dataset {
                 i_lon_max - i_lon_min + 1
             ];
 
-            let var_values = variable.values_at(&[i_lat_min, i_lon_min], &slice_size)?;
+            let mut var_values = variable.values_at(&[i_lat_min, i_lon_min], &slice_size)?;
             // Filter fill_values
-            let tile_values: Vec<Option<f32>> = match self.get_fill_value() {
-                Some(fill_value) => { var_values.iter().map(|v| {
-                        if *v == fill_value { None } else { Some(*v) }
-                    }).collect()
+            let tile_values: Vec<f32> = match self.get_fill_value() {
+                Some(fill_value) => { 
+                    for v in var_values.iter_mut() {
+                        if *v == fill_value { 
+                            *v = f32::NAN;
+                        }
+                    }
+                    var_values
                 },
-                None => { var_values.iter().map(|v| Some(*v)).collect()}
+                None => { var_values }
             };
             // Convert longitude and latitude into meters
             let lon: Vec<f64> = self.lon[i_lon_min..i_lon_max + 1]

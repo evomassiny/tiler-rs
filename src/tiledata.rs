@@ -1,5 +1,6 @@
 use tile::{Tile,Bbox};
 use std::cmp::min;
+use std::f32;
 
 pub const TILE_SIZE: usize = 256;
 
@@ -11,7 +12,7 @@ pub struct TileData {
     /// Must be expressed in meters, in ascending order
     pub lon: Vec<f64>,
     /// Values must be a flattened array (lat, lon)
-    pub values: Vec<Option<f32>>,
+    pub values: Vec<f32>,
     pub bbox: Bbox,
     pub tile: Tile,
 }
@@ -20,11 +21,11 @@ impl TileData {
     /**
      * regrid self.values into a TILE_SIZE x TILE_SIZE grid.
      */
-    pub fn to_tile_grid(&self) -> [[Option<f32>; TILE_SIZE]; TILE_SIZE] {
+    pub fn to_tile_grid(&self) -> [[f32; TILE_SIZE]; TILE_SIZE] {
 
         // fetch nearest latitudes indices:
-        //   loop on GRID latitudes, and for each of those, find the closest one in self.lat,
-        //   and store its index in an array (lat_ids)
+        // loop on GRID latitudes, and for each of those, find the closest one in self.lat,
+        // and store its index in an array (lat_ids)
         let mut lat_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
         let lat_inc: f64 = (self.bbox.north - self.bbox.south) / (TILE_SIZE as f64);
 
@@ -103,14 +104,14 @@ impl TileData {
         }
 
         // pick values using precomputed indices
-        let mut values: [[Option<f32>; TILE_SIZE]; TILE_SIZE] = [[None; TILE_SIZE]; TILE_SIZE];
+        let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [[f32::NAN; TILE_SIZE]; TILE_SIZE];
         for i_lat in 0..TILE_SIZE {
             for i_lon in 0..TILE_SIZE {
                 if i_lat < data_lat_min 
                     || i_lat > data_lat_max 
                     || i_lon < data_lon_min 
                     || i_lon > data_lon_max {
-                    values[i_lat][i_lon] = None;
+                    values[i_lat][i_lon] = f32::NAN;
                 } else {
                     values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
                 }
@@ -119,8 +120,9 @@ impl TileData {
         values
     }
 
+    #[inline]
     /// Return the value of self.values as if it was a bi-dimensional array.
-    fn value_at(&self, lat_idx: usize, lon_idx: usize) -> Option<f32> {
+    fn value_at(&self, lat_idx: usize, lon_idx: usize) -> f32 {
         return self.values[self.lon.len() * lat_idx + lon_idx];
     }
 
@@ -172,7 +174,7 @@ impl TileData {
                 // Extract lat, lon and values using the computed indices
                 let subset_lat: Vec<f64> = self.lat[i_lat_min..min(i_lat_max +1, self.lat.len() -1)].to_vec();
                 let subset_lon: Vec<f64> = self.lon[i_lon_min..min(i_lon_max +1, self.lon.len() -1)].to_vec();
-                let mut subset_values: Vec<Option<f32>> = Vec::with_capacity(subset_lat.len() * subset_lon.len());
+                let mut subset_values: Vec<f32> = Vec::with_capacity(subset_lat.len() * subset_lon.len());
                 for i_lat in i_lat_min..min(i_lat_max +1, self.lat.len() -1) {
                     for i_lon in i_lon_min..min(i_lon_max +1, self.lon.len() -1) {
                         subset_values.push(self.value_at(i_lat, i_lon));

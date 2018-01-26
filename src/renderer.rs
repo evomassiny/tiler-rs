@@ -82,18 +82,16 @@ impl Renderer {
      * Returns a pixel value (RGBA) from a value, according to the 
      * renderer colormap, min_value and max_value.
      */
-    pub fn value_to_rgba(&self, value: Option<f32>) -> [u8; 4] {
-        match value {
-            None => { [0u8, 0u8, 0u8, 0u8] },
-            Some(value) => {
-                let scaled_value = self.to_scale(value);
-                let rgb = rgb(scaled_value, &self.color_map);
-                [rgb[0], rgb[1], rgb[2], 255u8]
-            }
+    pub fn value_to_rgba(&self, value: f32) -> [u8; 4] {
+        if value.is_nan() {
+            return [0u8, 0u8, 0u8, 0u8];
         }
+        let scaled_value = self.to_scale(value);
+        let rgb = rgb(scaled_value, &self.color_map);
+        [rgb[0], rgb[1], rgb[2], 255u8]
     }
 
-    fn values_to_colors(&self, values: [[Option<f32>; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
+    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
         let mut colors = [0u8; 4* TILE_SIZE * TILE_SIZE];
         let mut count: usize = 0;
         // iter latitude in reverse, to fit the image X,Y orientation
