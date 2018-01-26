@@ -75,46 +75,11 @@ impl TileData {
             current_lon += lon_inc;
         }
 
-        // Exclude coordinates outside the dataset bounding box
-        //   (Check "how far" are the actual latitudes values from the requested ones (self.bbox))
-        let mut data_lat_min: usize = 0;
-        let mut boundary = self.bbox.south + lat_inc * 1.5;
-        while self.lat[lat_ids[data_lat_min]] > boundary && data_lat_min < (lat_ids.len() - 1) {
-            boundary += lat_inc;
-            data_lat_min += 1;
-        }
-        let mut data_lat_max: usize = lat_ids.len() - 1;
-        boundary = self.bbox.north - lat_inc * 1.5;
-        while self.lat[lat_ids[data_lat_max]] < boundary && data_lat_max > 0 {
-            boundary -= lat_inc;
-            data_lat_max -= 1;
-        }
-        //   (Check "how far" are the actual longitude values from the requested ones (self.bbox))
-        let mut data_lon_min: usize = 0;
-        boundary = self.bbox.west + lon_inc * 1.5;
-        while self.lon[lon_ids[data_lon_min]] > boundary && data_lon_min < (lon_ids.len() - 1) {
-            boundary += lon_inc;
-            data_lon_min += 1;
-        }
-        let mut data_lon_max: usize = lon_ids.len() - 1;
-        boundary = self.bbox.east - lon_inc * 1.5;
-        while self.lon[lon_ids[data_lon_max]] < boundary && data_lon_max > 0 {
-            boundary -= lon_inc;
-            data_lon_max -= 1;
-        }
-
         // pick values using precomputed indices
         let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [[f32::NAN; TILE_SIZE]; TILE_SIZE];
         for i_lat in 0..TILE_SIZE {
             for i_lon in 0..TILE_SIZE {
-                if i_lat < data_lat_min 
-                    || i_lat > data_lat_max 
-                    || i_lon < data_lon_min 
-                    || i_lon > data_lon_max {
-                    values[i_lat][i_lon] = f32::NAN;
-                } else {
-                    values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
-                }
+                values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
             }
         }
         values
