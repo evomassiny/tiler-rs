@@ -4,6 +4,7 @@ use tiledata::{TILE_SIZE};
 use tile::Tile;
 use tiledata::TileData;
 use colormap::{ColorMap,rgb};
+use scale::{Scale,normalize};
 use image;
 
 /// This struct represents an image tile,
@@ -34,64 +35,46 @@ impl ImgTile {
 
 /// Provides convenient functions to render a `Dataset` instance into `ImgTile`s
 pub struct Renderer {
-    /// Maximum value to represent. Every higher values (which isn't a fill value) will be 
-    /// rendered as if it was this `max_value`.
-    pub max_value: f32,
-    /// Minimum value to represent. Every lower values (which isn't a fill value) will be 
-    /// rendered as if it was this `min_value`.
-    pub min_value: f32,
     color_map: ColorMap,
+    scale: Scale,
     dataset: Dataset
 }
 impl Renderer {
     /** Create a `Renderer` instance from a dataset.
      *
-     * #Args
+     * # Args
      * * `dataset`: A dataset instance (which wraps an netCDF file)
      * * `min`: the minimum value of the colorbar
      * * `max`: the maximum value of the colorbar
      * * `color_map`: a ColorMap variant, which defines the *value* => *color* mapping
      */
-    pub fn from_dataset(dataset: Dataset, min: f32, max: f32, color_map: ColorMap) -> Result<Self, String> {
-        // TODO: read values from the dataset
+    pub fn from_dataset(dataset: Dataset, scale: Scale, color_map: ColorMap)
+            -> Result<Self, String> {
         Ok(
             Self {
-                min_value: min,
-                max_value: max,
                 color_map: color_map,
+                scale: scale,
                 dataset: dataset
             }
         )
     }
 
     /**
-     * Scale `value` into a [0; 1] domain, 
-     * using the render `min_value`, and `max_value`.
-     */
-    fn to_scale(&self, value: f32) -> f32 {
-        if value <= self.min_value {
-            return 0.;
-        } else if value >= self.max_value {
-            return 1.;
-        } else {
-            return (value -self. min_value) / (self.max_value - self.min_value);
-        }
-    }
-
-    /**
      * Returns a pixel value (RGBA) from a value, according to the 
-     * renderer colormap, min_value and max_value.
+     * renderer colormap, and the scale
      */
+    #[inline]
     pub fn value_to_rgba(&self, value: f32) -> [u8; 4] {
         if value.is_nan() {
             return [0u8, 0u8, 0u8, 0u8];
         }
-        let scaled_value = self.to_scale(value);
+        let scaled_value = normalize(&self.scale, value);
         let rgb = rgb(scaled_value, &self.color_map);
         [rgb[0], rgb[1], rgb[2], 255u8]
     }
 
-    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE]) -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
+    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE])
+            -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
         let mut colors = [0u8; 4* TILE_SIZE * TILE_SIZE];
         let mut count: usize = 0;
         // iter latitude in reverse, to fit the image X,Y orientation

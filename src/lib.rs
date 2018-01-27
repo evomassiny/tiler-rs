@@ -28,8 +28,10 @@
 //! // Create a renderer
 //! let renderer = tiler::Renderer::from_dataset(
 //!     dataset,        // input dataset
-//!     0.,             // minimum value of the colormap
-//!     20.,            // maximum value of the colormap
+//!     tiler::Scale::Linear { // Use a linear range of color
+//!         min: 0., // minimum value of the colorbar
+//!         max: 20.  // maximum value of the colorbar 
+//!     },
 //!     tiler::ColorMap::RdYlBu_r   // The ColorMap you want to use, (Red Yellow Blue)
 //! ).unwrap();
 //! 
@@ -47,12 +49,15 @@ extern crate netcdf;
 extern crate image;
 mod tile;
 mod colormap;
+mod scale;
 mod tiledata;
 mod dataset;
 mod renderer;
+mod utils;
 pub use tiledata::TileData;
 pub use renderer::{Renderer,ImgTile};
 pub use dataset::Dataset;
 pub use colormap::ColorMap;
 pub use tile::Tile;
+pub use scale::*;
 

@@ -3,6 +3,7 @@ use netcdf::file::File as NcFile;
 use tile::{Tile,LonLatBbox,lat_wgs84_to_meters,lon_wgs84_to_meters};
 use tiledata::TileData;
 use std::f32;
+use utils::search_closest_idx;
 
 /// This Struct provides access to the data within a netCDF file.
 pub struct Dataset {
@@ -94,41 +95,16 @@ impl Dataset {
         }
 
         // get longitude indices containing the tile data
-        let (mut i_lon_min, mut i_lon_max) = (0, self.lon.len() - 1);
-        for i in 0..self.lon.len() {
-            if bbox.west == self.lon[i] {
-                i_lon_min = i;
-                break;
-            } else if bbox.west > self.lon[i] {
-                i_lon_min = if i != 0 { i - 1 } else { 0 };
-                break;
-            }
-        }
-        for i in i_lon_min..self.lon.len() {
-            if bbox.east <= self.lon[i] {
-                i_lon_max = i;
-                break;
-            }
-
-        }
+        let i_lon_min: usize = search_closest_idx(&self.lon, &bbox.west)
+            .ok_or(format!("Longitude error"))?; 
+        let i_lon_max: usize = search_closest_idx(&self.lon, &bbox.east)
+            .ok_or(format!("Longitude error"))?; 
         // get latitude indices containing the tile data
-        let (mut i_lat_min, mut i_lat_max) = (0, self.lat.len() - 1);
-        for i in 0..self.lat.len() {
-            if bbox.south == self.lat[i] {
-                i_lat_min = i;
-                break;
-            } else if bbox.south > self.lat[i] {
-                i_lat_min = if i != 0 { i - 1 } else { 0 };
-                break;
-            }
-        }
-        for i in i_lat_min..self.lat.len() {
-            if bbox.north <= self.lat[i] {
-                i_lat_max = i;
-                break;
-            }
+        let i_lat_max: usize = search_closest_idx(&self.lat, &bbox.north)
+            .ok_or(format!("Latitude error"))?; 
+        let i_lat_min: usize = search_closest_idx(&self.lat, &bbox.south)
+            .ok_or(format!("Latitude error"))?; 
 
-        }
         // Extract data from the netCDF Dataset
         if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
             
@@ -138,7 +114,10 @@ impl Dataset {
                 i_lon_max - i_lon_min + 1
             ];
 
-            let mut var_values = variable.values_at(&[i_lat_min, i_lon_min], &slice_size)?;
+            let mut var_values = variable.values_at(
+                &[i_lat_min, i_lon_min],    // start of the data slice
+                &slice_size                 // size of the data slice
+            )?;
             // Filter fill_values
             let tile_values: Vec<f32> = match self.get_fill_value() {
                 Some(fill_value) => { 
@@ -153,9 +132,13 @@ impl Dataset {
             };
             // Convert longitude and latitude into meters
             let lon: Vec<f64> = self.lon[i_lon_min..i_lon_max + 1]
-                .iter().map(|x| lon_wgs84_to_meters(*x)).collect();
+                .iter()
+                .map(|x| lon_wgs84_to_meters(*x))
+                .collect();
             let lat: Vec<f64> = self.lat[i_lat_min..i_lat_max + 1]
-                .iter().map(|x| lat_wgs84_to_meters(*x)).collect();
+                .iter()
+                .map(|x| lat_wgs84_to_meters(*x))
+                .collect();
 
             return Ok(
                 TileData {

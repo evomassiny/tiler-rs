@@ -21,9 +21,11 @@ fn main() {
     println!("Creating a RdYlBu_r renderer");
     let renderer = tiler::Renderer::from_dataset(
         dataset,        // input dataset
-        value_min,      // minimum value of the colorbar
-        value_max,      // maximum value of the colorbar 
-        tiler::ColorMap::RdYlBu_r   // Red Yellow Bleu colormap
+        tiler::Scale::Linear { // Use a linear range of color
+            min: value_min, // minimum value of the colorbar
+            max: value_max  // maximum value of the colorbar 
+        },
+        tiler::ColorMap::RdYlBu_r   // Red Yellow Blue colormap
     ).unwrap();
 
     let mut max: u16 = 2;
