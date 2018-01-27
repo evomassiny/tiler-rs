@@ -67,8 +67,8 @@ impl Dataset {
      * the lon/lat range of the dataset
      */
     fn contains_bbox(&self, bbox: &LonLatBbox) -> bool {
-        let (lon_min, lon_max) = (self.lon[0], self.lon[self.lon.len() -1 ]);
-        let (lat_min, lat_max) = (self.lat[0], self.lat[self.lat.len() -1 ]);
+        let (lon_min, lon_max) = (self.lon[0], self.lon[self.lon.len() -1]);
+        let (lat_min, lat_max) = (self.lat[0], self.lat[self.lat.len() -1]);
         if bbox.west <= lon_min && bbox.east <= lon_min {
             return false;
         }
@@ -95,15 +95,27 @@ impl Dataset {
         }
 
         // get longitude indices containing the tile data
-        let i_lon_min: usize = search_closest_idx(&self.lon, &bbox.west)
+        let mut i_lon_min: usize = search_closest_idx(&self.lon, &bbox.west)
             .ok_or(format!("Longitude error"))?; 
-        let i_lon_max: usize = search_closest_idx(&self.lon, &bbox.east)
+        if i_lon_min > 0 && self.lon[i_lon_min] > bbox.west {
+            i_lon_min -= 1;
+        }
+        let mut i_lon_max: usize = search_closest_idx(&self.lon, &bbox.east)
             .ok_or(format!("Longitude error"))?; 
+        if i_lon_max != (self.lon.len() -1) && self.lon[i_lon_max] < bbox.east {
+            i_lon_max += 1;
+        }
         // get latitude indices containing the tile data
-        let i_lat_max: usize = search_closest_idx(&self.lat, &bbox.north)
+        let mut i_lat_min: usize = search_closest_idx(&self.lat, &bbox.south)
             .ok_or(format!("Latitude error"))?; 
-        let i_lat_min: usize = search_closest_idx(&self.lat, &bbox.south)
+        if i_lat_min > 0 && self.lat[i_lat_min] > bbox.south {
+            i_lat_min -= 1;
+        }
+        let mut i_lat_max: usize = search_closest_idx(&self.lat, &bbox.north)
             .ok_or(format!("Latitude error"))?; 
+        if i_lat_max != (self.lat.len() -1) && self.lat[i_lat_max] < bbox.north {
+            i_lat_max += 1;
+        }
 
         // Extract data from the netCDF Dataset
         if let Some(variable) = self.file.root.variables.get(&self.variable_name) {

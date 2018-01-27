@@ -1,6 +1,7 @@
 use tile::{Tile,Bbox};
 use std::cmp::min;
 use std::f32;
+use utils::search_closest_idx;
 
 pub const TILE_SIZE: usize = 256;
 
@@ -23,66 +24,128 @@ impl TileData {
      */
     pub fn to_tile_grid(&self) -> [[f32; TILE_SIZE]; TILE_SIZE] {
 
-        // fetch nearest latitudes indices:
-        // loop on GRID latitudes, and for each of those, find the closest one in self.lat,
-        // and store its index in an array (lat_ids)
+        // fetch nearest latitudes indices
         let mut lat_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
-        let lat_inc: f64 = (self.bbox.north - self.bbox.south) / (TILE_SIZE as f64);
+        let lat_inc: f64 = (self.bbox.north -self.bbox.south) / (TILE_SIZE as f64);
 
-        let mut current_idx: usize = 0;
-        let mut current_lat: f64 = self.bbox.south;
-        for i in 0..TILE_SIZE {
-            // If the closest lat value is the biggest one, 
-            // it won't change over the next iteration
-            if current_idx == self.lat.len() -1 {
-                for following_i in i..TILE_SIZE {
-                    lat_ids[following_i] = current_idx;
-                }
-                break;
-            }
-            while (self.lat[current_idx] - current_lat).abs() >  (self.lat[current_idx + 1] - current_lat).abs() {
-                current_idx += 1;
-                if current_idx == self.lat.len() -1 {
-                    break;
-                }
-            }
-            lat_ids[i] = current_idx;
-            current_lat += lat_inc;
+        let lats: Vec<f64> = (0..TILE_SIZE).map(|i| {
+            self.bbox.south + lat_inc * (0.5 + i as f64)
+        }).collect();
+        for (i, lat) in lats.iter().enumerate() {
+            lat_ids[i] = search_closest_idx(&self.lat, lat).unwrap();
         }
 
         // fetch nearest longitude indices
-        //   loop on the tile grid longitude , and for each of those, find the closest one in self.lon,
-        //   and store its index in an array (lon_ids)
         let mut lon_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
         let lon_inc: f64 = (self.bbox.east - self.bbox.west) / (TILE_SIZE as f64);
 
-        let mut current_idx: usize = 0;
-        let mut current_lon: f64 = self.bbox.west;
-        for i in 0..TILE_SIZE {
-            if current_idx == self.lon.len() -1 {
-                for following_i in i..TILE_SIZE {
-                    lon_ids[following_i] = current_idx;
-                }
-                break;
-            }
-            while (self.lon[current_idx] - current_lon).abs() >  (self.lon[current_idx + 1] - current_lon).abs() {
-                current_idx += 1;
-                if current_idx == self.lon.len() -1 {
-                    break;
-                }
-            }
-            lon_ids[i] = current_idx;
-            current_lon += lon_inc;
+        let lons: Vec<f64> = (0..TILE_SIZE).map(|i| {
+            self.bbox.west + lon_inc * (0.5 + i as f64)
+        }).collect();
+        for (i, lon) in lons.iter().enumerate() {
+            lon_ids[i] = search_closest_idx(&self.lon, lon).unwrap();
         }
 
         // pick values using precomputed indices
-        let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [[f32::NAN; TILE_SIZE]; TILE_SIZE];
-        for i_lat in 0..TILE_SIZE {
-            for i_lon in 0..TILE_SIZE {
-                values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
+        let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [
+            [f32::NAN; TILE_SIZE];
+            TILE_SIZE
+        ];
+        if self.values.len() > TILE_SIZE * TILE_SIZE {
+            for i_lat in 0..TILE_SIZE {
+                for i_lon in 0..TILE_SIZE {
+                    values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
+                }
+            }
+
+        } else {
+            for (i_lat, lat) in lats.iter().enumerate() {
+                for (i_lon, lon) in lons.iter().enumerate() {
+                    //values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
+                    values[i_lat][i_lon] = self.interpolate_value_at(
+                        *lat,
+                        *lon,
+                        lat_ids[i_lat],
+                        lon_ids[i_lon]
+                    );
+                }
             }
         }
+        //println!("{}, {}", self.lat.len(), self.lon.len());
         values
+    }
+
+    fn interpolate_value_at( &self, requested_lat: f64, requested_lon: f64, lat_idx: usize, lon_idx: usize) ->  f32 {
+
+        let mut can_interp_lon = (lon_idx > 0 || self.lon[lon_idx] < requested_lon) 
+               && (lon_idx < self.lon.len()-1 || self.lon[lon_idx] > requested_lon);
+        let mut can_interp_lat = (lat_idx > 0 || self.lat[lat_idx] < requested_lat) 
+               && (lat_idx < self.lat.len()-1 || self.lat[lat_idx] > requested_lat);
+
+        can_interp_lon &= requested_lon != self.lon[lon_idx];
+        can_interp_lat &= requested_lat != self.lat[lat_idx];
+
+        let interp_between = | va: f32, a: f64, vb: f32, b: f64, x: f64 | -> f32 {
+            if (a - b).abs() > 10. && (x -a).abs() > 10. && (x-b).abs() > 10. {
+                ((va as f64 * (x - b).abs() + vb as f64 * (x - a).abs()) / (a - b).abs()) as f32
+            } else { 
+                if (x-a).abs() < (x-b).abs() {
+                    return va;
+                }
+                return vb;
+            }
+        };
+        let other_lon_idx: usize = if requested_lon > self.lon[lon_idx] {
+            lon_idx +1 } else { lon_idx -1 }; 
+        let other_lat_idx: usize = if requested_lat > self.lat[lat_idx] {
+            lat_idx +1 } else { lat_idx -1 }; 
+
+        if can_interp_lon && can_interp_lat {
+            let val_aa = self.value_at(lat_idx, lon_idx);
+            let val_ab = self.value_at(lat_idx, other_lon_idx);
+            let val_ba = self.value_at(other_lat_idx, lon_idx);
+            let val_bb = self.value_at(other_lat_idx, other_lon_idx);
+            let a = interp_between(
+                val_aa,
+                self.lon[lon_idx],
+                val_ab,
+                self.lon[other_lon_idx],
+                requested_lon
+            );
+            let b = interp_between(
+                val_ba,
+                self.lon[lon_idx],
+                val_bb,
+                self.lon[other_lon_idx],
+                requested_lon
+            );
+
+            return interp_between(
+                a,
+                self.lat[lat_idx],
+                b,
+                self.lat[other_lat_idx],
+                requested_lat
+            );
+        } else if can_interp_lon {
+            return interp_between(
+                self.value_at(lat_idx, lon_idx),
+                self.lon[lon_idx],
+                self.value_at(lat_idx, other_lon_idx),
+                self.lon[other_lon_idx],
+                requested_lon
+            );
+        } else if can_interp_lat {
+            return interp_between(
+                self.value_at(lat_idx, lon_idx),
+                self.lat[lat_idx],
+                self.value_at(lat_idx, lon_idx),
+                self.lat[other_lat_idx],
+                requested_lat
+            );
+        } else {
+            return self.value_at(lat_idx, lon_idx);
+        }
     }
 
     #[inline]
