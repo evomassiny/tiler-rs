@@ -55,10 +55,12 @@ fn main()  {
 
     // Create a renderer
     let renderer = tiler::Renderer::from_dataset(
-        dataset,        // input dataset
-        0.,             // minimum value of the colormap
-        20.,            // maximum value of the colormap
-        tiler::ColorMap::RdYlBu_r   // The ColorMap you want to use, (Red Yellow Blue)
+        dataset,                // input dataset
+        tiler::Scale::Linear {  // use a linear value to color translation
+            min: 0.,            // minimum value of the colormap
+            max: 20.            // maximum value of the colormap
+        },           
+        tiler::ColorMap::RdYlBu_r   // The ColorMap you want to use, (Red Yellow Blue inverted)
     ).unwrap();
 
     // create a Tile Struct
