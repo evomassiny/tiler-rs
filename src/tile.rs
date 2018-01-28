@@ -1,6 +1,7 @@
 use std::f64::{self, consts};
 
 const EARTH_RADIUS: f64 = 6378137.0;
+const PERIMETER: f64 = EARTH_RADIUS * 2. *  consts::PI;
 
 #[allow(dead_code)]
 /**
@@ -24,6 +25,18 @@ pub fn tile_to_wgs84(x: u16, y: u16, z: u16) -> (f64, f64){
     let lon_deg = x / n * 360.0 - 180.0;
     let lat_deg = (consts::PI * (1.0 - 2.0 * y / n)).sinh().atan().to_degrees();
     (lon_deg, lat_deg)
+}
+
+/**
+ * Turns tiles coordinates into Webmercator (EPSG:3857)
+ */
+pub fn tile_to_3857(x: u16, y: u16, z: u16) -> (f64, f64){
+    let (x, y) = (x as f64, y as f64);
+    let n = 2_f64.powf(z as f64);
+    let resolution = PERIMETER / n;
+    let x_meter = (x * resolution) - PERIMETER / 2.;
+    let y_meter = -(y * resolution) + PERIMETER / 2.;
+    (x_meter, y_meter)
 }
 
 /**
@@ -102,7 +115,10 @@ impl Tile {
      * Returns Bounding box in Spheriacl mercator coordinates (meters)
      */
     pub fn xy_bounds(&self) -> Bbox {
-        self.bounds().xy()
+        //self.bounds().xy()
+        let (west, north) = tile_to_3857(self.x, self.y, self.z);
+        let (east, south) = tile_to_3857(self.x + 1, self.y + 1, self.z);
+        Bbox {west, south, east, north}
     }
 }
 
