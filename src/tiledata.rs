@@ -17,6 +17,7 @@ pub struct TileData {
     pub bbox: Bbox,
     pub tile: Tile,
 }
+
 impl TileData {
 
     /**
@@ -24,102 +25,102 @@ impl TileData {
      */
     pub fn to_tile_grid(&self) -> [[f32; TILE_SIZE]; TILE_SIZE] {
 
-        // fetch nearest latitudes indices
-        let mut lat_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
+        // Build latitude needed for each pixel
         let lat_inc: f64 = (self.bbox.north -self.bbox.south) / (TILE_SIZE as f64);
-
         let lats: Vec<f64> = (0..TILE_SIZE).map(|i| {
             self.bbox.south + lat_inc * (0.5 + i as f64)
         }).collect();
-        for (i, lat) in lats.iter().enumerate() {
-            lat_ids[i] = search_closest_idx(&self.lat, lat).unwrap();
-        }
 
-        // fetch nearest longitude indices
-        let mut lon_ids: [usize; TILE_SIZE] = [0; TILE_SIZE];
+        // Build longitude needed for each pixel
         let lon_inc: f64 = (self.bbox.east - self.bbox.west) / (TILE_SIZE as f64);
-
         let lons: Vec<f64> = (0..TILE_SIZE).map(|i| {
             self.bbox.west + lon_inc * (0.5 + i as f64)
         }).collect();
-        for (i, lon) in lons.iter().enumerate() {
-            lon_ids[i] = search_closest_idx(&self.lon, lon).unwrap();
-        }
 
-        // pick values using precomputed indices
+        // Build output values
         let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [
             [f32::NAN; TILE_SIZE];
             TILE_SIZE
         ];
+        // directly fetch the nearest data or interpole it
+        // depending of the number of data available
         if self.values.len() > TILE_SIZE * TILE_SIZE {
-            for i_lat in 0..TILE_SIZE {
-                for i_lon in 0..TILE_SIZE {
-                    values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
-                }
-            }
-
-        } else {
+            // directly fetch the nearest data for each pixel
             for (i_lat, lat) in lats.iter().enumerate() {
                 for (i_lon, lon) in lons.iter().enumerate() {
-                    //values[i_lat][i_lon] = self.value_at(lat_ids[i_lat], lon_ids[i_lon]);
-                    values[i_lat][i_lon] = self.interpolate_value_at(
-                        *lat,
-                        *lon,
-                        lat_ids[i_lat],
-                        lon_ids[i_lon]
-                    );
+                    let lat_idx = search_closest_idx(&self.lat, lat).unwrap();
+                    let lon_idx = search_closest_idx(&self.lon, lon).unwrap();
+                    values[i_lat][i_lon] = self.value_at(lat_idx, lon_idx);
+                }
+            }
+        } else {
+            // interpolate each pixel value
+            for (i_lat, lat) in lats.iter().enumerate() {
+                for (i_lon, lon) in lons.iter().enumerate() {
+                    values[i_lat][i_lon] = self.interpolate_value_at(*lat, *lon);
                 }
             }
         }
-        //println!("{}, {}", self.lat.len(), self.lon.len());
         values
     }
 
-    fn interpolate_value_at( &self, requested_lat: f64, requested_lon: f64, lat_idx: usize, lon_idx: usize) ->  f32 {
+    /// This function fetch and interpolate the data from self.value, self.lon, self.lat
+    /// at the requested lat / lon.
+    /// It basically performs a bilinear interpolation
+    fn interpolate_value_at( &self, requested_lat: f64, requested_lon: f64) ->  f32 {
+        // fetch nearest longitude / latitude indices
+        let lat_idx = search_closest_idx(&self.lat, &requested_lat).unwrap();
+        let lon_idx = search_closest_idx(&self.lon, &requested_lon).unwrap();
 
-        let mut can_interp_lon = (lon_idx > 0 || self.lon[lon_idx] < requested_lon) 
+        // see if we can interpolate the data, we need 4 points inside the bounding
+        // box of self.lon ans self.lat
+        let can_interp_lon = (lon_idx > 0 || self.lon[lon_idx] < requested_lon) 
                && (lon_idx < self.lon.len()-1 || self.lon[lon_idx] > requested_lon);
-        let mut can_interp_lat = (lat_idx > 0 || self.lat[lat_idx] < requested_lat) 
+        let can_interp_lat = (lat_idx > 0 || self.lat[lat_idx] < requested_lat) 
                && (lat_idx < self.lat.len()-1 || self.lat[lat_idx] > requested_lat);
 
-        can_interp_lon &= requested_lon != self.lon[lon_idx];
-        can_interp_lat &= requested_lat != self.lat[lat_idx];
-
+        // this function interpolate a value between 2 other
+        // * `a` and `b` are the position of the 2 input points, 
+        // * `va` and `vb` are their values.
+        // * `x` is the position where the output value will be expressed
         let interp_between = | va: f32, a: f64, vb: f32, b: f64, x: f64 | -> f32 {
-            if (a - b).abs() > 10. && (x -a).abs() > 10. && (x-b).abs() > 10. {
-                ((va as f64 * (x - b).abs() + vb as f64 * (x - a).abs()) / (a - b).abs()) as f32
-            } else { 
-                if (x-a).abs() < (x-b).abs() {
-                    return va;
+            let vx =  va * ((x - b).abs() / (a - b).abs()) as f32 
+             +  vb * ((x - a).abs() / (a - b).abs()) as f32;
+            // because of the float precision, we need to filter aberrant values
+            // generated by the interpolation
+            if vx > vb && vx > va {
+                // return the closest
+                if (a - x).abs() > (b - x).abs() {
+                    return vb;
                 }
-                return vb;
+                return va;
             }
+            return vx;
         };
+
+        // get the indices of the other points needed to interpolate
         let other_lon_idx: usize = if requested_lon > self.lon[lon_idx] {
             lon_idx +1 } else { lon_idx -1 }; 
         let other_lat_idx: usize = if requested_lat > self.lat[lat_idx] {
             lat_idx +1 } else { lat_idx -1 }; 
 
         if can_interp_lon && can_interp_lat {
-            let val_aa = self.value_at(lat_idx, lon_idx);
-            let val_ab = self.value_at(lat_idx, other_lon_idx);
-            let val_ba = self.value_at(other_lat_idx, lon_idx);
-            let val_bb = self.value_at(other_lat_idx, other_lon_idx);
+            // First interpolate linearly the 4 points at the requested longitude
             let a = interp_between(
-                val_aa,
+                self.value_at(lat_idx, lon_idx),
                 self.lon[lon_idx],
-                val_ab,
+                self.value_at(lat_idx, other_lon_idx),
                 self.lon[other_lon_idx],
                 requested_lon
             );
             let b = interp_between(
-                val_ba,
+                self.value_at(other_lat_idx, lon_idx),
                 self.lon[lon_idx],
-                val_bb,
+                self.value_at(other_lat_idx, other_lon_idx),
                 self.lon[other_lon_idx],
                 requested_lon
             );
-
+            // finally interpolate at the requested latitude
             return interp_between(
                 a,
                 self.lat[lat_idx],
@@ -128,6 +129,7 @@ impl TileData {
                 requested_lat
             );
         } else if can_interp_lon {
+            // only interpolate at the requested longitude
             return interp_between(
                 self.value_at(lat_idx, lon_idx),
                 self.lon[lon_idx],
@@ -136,6 +138,7 @@ impl TileData {
                 requested_lon
             );
         } else if can_interp_lat {
+            // only interpolate at the requested latitude
             return interp_between(
                 self.value_at(lat_idx, lon_idx),
                 self.lat[lat_idx],
@@ -144,6 +147,7 @@ impl TileData {
                 requested_lat
             );
         } else {
+            // If we can't interpolate, returns the nearest value
             return self.value_at(lat_idx, lon_idx);
         }
     }
@@ -156,6 +160,7 @@ impl TileData {
 
     /// Creates up to 4 tiles, representing the n+1 zoom level using self.values
     pub fn sub_tiledata(&self) -> Vec<Self> {
+        // TODO: Use binary search
         let mut sub_tiledata: Vec<Self> = Vec::new();
         let base_x = self.tile.x * 2;
         let base_y = self.tile.y * 2;
