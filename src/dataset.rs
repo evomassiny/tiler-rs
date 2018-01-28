@@ -1,13 +1,16 @@
 use netcdf;
 use netcdf::file::File as NcFile;
-use tile::{Tile,LonLatBbox,lat_wgs84_to_meters,lon_wgs84_to_meters};
+use tile::{Tile,Bbox,lat_wgs84_to_meters,lon_wgs84_to_meters};
+//use tile::{Tile,LonLatBbox,lat_to_pixel,lon_to_pixel};
 use tiledata::TileData;
 use std::f32;
 use utils::search_closest_idx;
 
 /// This Struct provides access to the data within a netCDF file.
 pub struct Dataset {
+    // meter (Web Mercator)
     lat: Vec<f64>,
+    // meter (Web Mercator)
     lon: Vec<f64>,
     variable_name: String,
     file: NcFile,
@@ -32,14 +35,22 @@ impl Dataset {
     ///
     pub fn new(latitude: &str, longitude: &str, variable: &str, file_path: &str) -> Result<Self,String> {
         let file = netcdf::open(file_path)?;
-        let lat: Vec<f64> = file.root.variables
+        let mut lat: Vec<f64> = file.root.variables
             .get(latitude)
             .ok_or("No latitude")?
             .values()?;
-        let lon: Vec<f64> = file.root.variables
+        // convert WGS84 to WebMercator
+        for y in lat.iter_mut() {
+            *y = lat_wgs84_to_meters(*y);
+        }
+        let mut lon: Vec<f64> = file.root.variables
             .get(longitude)
             .ok_or("No longitude")?
             .values()?;
+        // convert WGS84 to WebMercator
+        for x in lon.iter_mut() {
+            *x = lon_wgs84_to_meters(*x);
+        }
         Ok(
             Self {
                 lat: lat,
@@ -66,7 +77,7 @@ impl Dataset {
      * Check if the bounding box is not strictly outside
      * the lon/lat range of the dataset
      */
-    fn contains_bbox(&self, bbox: &LonLatBbox) -> bool {
+    fn contains_bbox(&self, bbox: &Bbox) -> bool {
         let (lon_min, lon_max) = (self.lon[0], self.lon[self.lon.len() -1]);
         let (lat_min, lat_max) = (self.lat[0], self.lat[self.lat.len() -1]);
         if bbox.west <= lon_min && bbox.east <= lon_min {
@@ -89,7 +100,7 @@ impl Dataset {
      * and pack it into a TileData
      */
     pub fn get_tile_data(&self, tile: &Tile) -> Result<TileData, String> {
-        let bbox = tile.bounds();
+        let bbox = tile.xy_bounds();
         if !self.contains_bbox(&bbox) {
             return Err("tile outside range".into());
         }
@@ -97,23 +108,23 @@ impl Dataset {
         // get longitude indices containing the tile data
         let mut i_lon_min: usize = search_closest_idx(&self.lon, &bbox.west)
             .ok_or(format!("Longitude error"))?; 
-        if i_lon_min > 0 && self.lon[i_lon_min] > bbox.west {
+        if i_lon_min > 0 && bbox.west <= self.lon[i_lon_min] {
             i_lon_min -= 1;
         }
         let mut i_lon_max: usize = search_closest_idx(&self.lon, &bbox.east)
             .ok_or(format!("Longitude error"))?; 
-        if i_lon_max != (self.lon.len() -1) && self.lon[i_lon_max] < bbox.east {
+        if i_lon_max != (self.lon.len() -1) && bbox.east >= self.lon[i_lon_max] {
             i_lon_max += 1;
         }
         // get latitude indices containing the tile data
         let mut i_lat_min: usize = search_closest_idx(&self.lat, &bbox.south)
             .ok_or(format!("Latitude error"))?; 
-        if i_lat_min > 0 && self.lat[i_lat_min] > bbox.south {
+        if i_lat_min > 0 && bbox.south <= self.lat[i_lat_min] {
             i_lat_min -= 1;
         }
         let mut i_lat_max: usize = search_closest_idx(&self.lat, &bbox.north)
             .ok_or(format!("Latitude error"))?; 
-        if i_lat_max != (self.lat.len() -1) && self.lat[i_lat_max] < bbox.north {
+        if i_lat_max != (self.lat.len() -1) && bbox.north >= self.lat[i_lat_max] {
             i_lat_max += 1;
         }
 
@@ -143,13 +154,17 @@ impl Dataset {
                 None => { var_values }
             };
             // Convert longitude and latitude into meters
-            let lon: Vec<f64> = self.lon[i_lon_min..i_lon_max + 1]
+            let lon: Vec<f64> = self.lon[i_lon_min..(i_lon_max + 1) ]
                 .iter()
-                .map(|x| lon_wgs84_to_meters(*x))
+                //.map(|x| lon_to_pixel(*x, tile.z))
+                //.map(|x| lon_wgs84_to_meters(*x))
+                .map(|x| *x)
                 .collect();
-            let lat: Vec<f64> = self.lat[i_lat_min..i_lat_max + 1]
+            let lat: Vec<f64> = self.lat[i_lat_min..(i_lat_max + 1)]
                 .iter()
-                .map(|x| lat_wgs84_to_meters(*x))
+                //.map(|y| lat_to_pixel(*y, tile.z))
+                //.map(|x| lat_wgs84_to_meters(*x))
+                .map(|x| *x)
                 .collect();
 
             return Ok(
@@ -157,7 +172,8 @@ impl Dataset {
                     lon: lon,
                     lat: lat,
                     values: tile_values,
-                    bbox: tile.xy_bounds(),
+                    bbox: bbox,
+                    //bbox: tile.xy_bounds(),
                     tile: Tile {x: tile.x, y: tile.y, z: tile.z }
                 }
             );

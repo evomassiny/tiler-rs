@@ -20,7 +20,7 @@ pub fn lon_lat_to_tile(lon: f64, lat: f64, zoom: u16) -> (u16, u16, u16) {
  */
 pub fn tile_to_wgs84(x: u16, y: u16, z: u16) -> (f64, f64){
     let (x, y) = (x as f64, y as f64);
-    let n = 2u32.pow(z as u32) as f64;
+    let n = 2_f64.powf(z as f64);
     let lon_deg = x / n * 360.0 - 180.0;
     let lat_deg = (consts::PI * (1.0 - 2.0 * y / n)).sinh().atan().to_degrees();
     (lon_deg, lat_deg)
@@ -38,6 +38,7 @@ pub fn lon_wgs84_to_meters(lon: f64) -> f64 {
 pub fn lat_wgs84_to_meters(lat: f64) -> f64 {
     EARTH_RADIUS * (consts::PI / 4. + lat.to_radians() / 2.).tan().ln()
 }
+
 /**
  * Turns WGS84 coordinates into meters (Spherical mercator)
  */
