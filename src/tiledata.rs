@@ -42,15 +42,13 @@ impl TileData {
             [f32::NAN; TILE_SIZE];
             TILE_SIZE
         ];
-        // directly fetch the nearest data or interpole it
+        // directly average the nearest data or interpole it
         // depending of the number of data available
         if self.values.len() > TILE_SIZE * TILE_SIZE {
-            // directly fetch the nearest data for each pixel
+            // average the data contained in the pixel extend
             for (i_lat, lat) in lats.iter().enumerate() {
                 for (i_lon, lon) in lons.iter().enumerate() {
-                    let lat_idx = search_closest_idx(&self.lat, lat).unwrap();
-                    let lon_idx = search_closest_idx(&self.lon, lon).unwrap();
-                    values[i_lat][i_lon] = self.value_at(lat_idx, lon_idx);
+                    values[i_lat][i_lon] = self.resample_average(*lat, *lon, lat_inc, lon_inc);
                 }
             }
         } else {
@@ -62,6 +60,55 @@ impl TileData {
             }
         }
         values
+    }
+
+    /// Fetch and compute the average of all value represented by a single pixel
+    fn resample_average(&self, requested_lat: f64, requested_lon: f64, lat_inc: f64, lon_inc: f64) ->  f32 {
+
+        // get the index ot the lowest bound
+        let min_lat_idx = search_closest_idx(
+            &self.lat,
+            &(requested_lat - lat_inc / 2.)
+        ).unwrap();
+        let min_lon_idx = search_closest_idx(
+            &self.lon,
+            &(requested_lon - lon_inc / 2.)
+        ).unwrap();
+
+        // get the index ot the highest bound
+        let mut max_lat_idx = min_lat_idx;
+        while max_lat_idx != (self.lat.len() -1) 
+            && self.lat[max_lat_idx] < (requested_lat + lat_inc / 2.) {
+            max_lat_idx += 1;
+        }
+        let mut max_lon_idx = min_lon_idx;
+        while max_lon_idx != (self.lon.len() -1) 
+            && self.lon[max_lon_idx] < (requested_lon + lon_inc / 2.) {
+            max_lon_idx += 1;
+        }
+        // FETCH values inside the square defined by the bounds
+        let mut values: Vec<f32> = Vec::with_capacity(
+            (max_lon_idx - min_lon_idx) * (max_lat_idx - min_lat_idx)
+        );
+        for lat_idx in min_lat_idx..(max_lat_idx+1) {
+            for lon_idx in min_lon_idx..(max_lon_idx+1) {
+                values.push(self.value_at(lat_idx, lon_idx));
+            }
+        }
+        // compute the average of it
+        let mut pixel_value: f32 = 0.;
+        let mut valid_count: f32 = 0.;
+        for value in values {
+            // ignore NAN
+            if !value.is_nan() {
+                pixel_value += value;
+                valid_count += 1.;
+            }
+        }
+        if valid_count == 0. {
+            return f32::NAN;
+        }
+        (pixel_value / valid_count)
     }
 
     /// This function fetch and interpolate the data from self.value, self.lon, self.lat
