@@ -142,28 +142,20 @@ impl Dataset {
                 &slice_size                 // size of the data slice
             )?;
             // Filter fill_values
-            let tile_values: Vec<f32> = match self.get_fill_value() {
-                Some(fill_value) => { 
-                    for v in var_values.iter_mut() {
-                        if *v == fill_value { 
-                            *v = f32::NAN;
-                        }
+            if let Some(fill_value) = self.get_fill_value() {
+                for v in var_values.iter_mut() {
+                    if *v == fill_value { 
+                        *v = f32::NAN;
                     }
-                    var_values
-                },
-                None => { var_values }
-            };
-            // Convert longitude and latitude into meters
-            let lon: Vec<f64> = self.lon[i_lon_min..(i_lon_max + 1) ]
+                }
+            }
+            // Pick the associated lon /lat values
+            let lon: Vec<f64> = self.lon[i_lon_min..(i_lon_max + 1)]
                 .iter()
-                //.map(|x| lon_to_pixel(*x, tile.z))
-                //.map(|x| lon_wgs84_to_meters(*x))
                 .map(|x| *x)
                 .collect();
             let lat: Vec<f64> = self.lat[i_lat_min..(i_lat_max + 1)]
                 .iter()
-                //.map(|y| lat_to_pixel(*y, tile.z))
-                //.map(|x| lat_wgs84_to_meters(*x))
                 .map(|x| *x)
                 .collect();
 
@@ -171,9 +163,8 @@ impl Dataset {
                 TileData {
                     lon: lon,
                     lat: lat,
-                    values: tile_values,
+                    values: var_values,
                     bbox: bbox,
-                    //bbox: tile.xy_bounds(),
                     tile: Tile {x: tile.x, y: tile.y, z: tile.z }
                 }
             );

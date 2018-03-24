@@ -28,7 +28,7 @@ pub fn tile_to_wgs84(x: u16, y: u16, z: u16) -> (f64, f64){
 }
 
 /**
- * Turns tiles coordinates into Webmercator (EPSG:3857)
+ * Turns tiles coordinates into WebMercator (EPSG:3857)
  */
 pub fn tile_to_3857(x: u16, y: u16, z: u16) -> (f64, f64){
     let (x, y) = (x as f64, y as f64);
@@ -49,7 +49,8 @@ pub fn lon_wgs84_to_meters(lon: f64) -> f64 {
  * Turns WGS84 latitude into meters (Spherical mercator)
  */
 pub fn lat_wgs84_to_meters(lat: f64) -> f64 {
-    EARTH_RADIUS * (consts::PI / 4. + lat.to_radians() / 2.).tan().ln()
+    //EARTH_RADIUS * (consts::PI / 4. + lat.to_radians() / 2.).tan().ln()
+    EARTH_RADIUS * lat.to_radians().sin().atanh()
 }
 
 /**
