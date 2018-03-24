@@ -9,46 +9,47 @@ pub fn search_closest_idx(values: &Vec<f64>, target_value: &f64) -> Option<usize
     if values.len() == 0 || target_value.is_nan() {
         return None;
     }
+    let max_idx = values.len() -1;
+    // size of the dichotomie interval
     let mut step: usize = values.len() / 2;
+    // current index
     let mut idx: usize = step;
     // Perform a binary search (i.e dichotomie)
-    loop {
-        step /= 2;
-        match (values[idx]).partial_cmp(target_value) {
-            Some(Ordering::Less) => {
-                if step > 0 {
+	loop {
+        // update the interval length
+        step = (1 + step) / 2;
+		match (values[idx]).partial_cmp(target_value) {
+			Some(Ordering::Less) => {
+                if idx < max_idx - step {
                     idx += step;
                 } else {
-                    // if idx is the vec boundary
-                    if idx == values.len() - 1 {
-                        return Some(idx);
-                    }
-                    // Return closest between `values[idx]` and `values[idx+1]`
-                    if (values[idx] - target_value).abs() < (values[idx+1] - target_value).abs() {
-                        return Some(idx);
-                    }
-                    return Some(idx + 1);
+                    idx = max_idx;
                 }
             },
-            Some(Ordering::Greater) => {
-                if step > 0 {
+			Some(Ordering::Greater) => { 
+                if idx > step {
                     idx -= step;
                 } else {
-                    // if idx is the vec boundary
-                    if idx == 0 {
-                        return Some(idx);
-                    }
-                    // Return closest between `values[idx]` and `values[idx-1]`
-                    if (values[idx] - target_value).abs() < (values[idx-1] - target_value).abs() {
-                        return Some(idx);
-                    }
-                    return Some(idx - 1);
+                    idx = 0;
                 }
             },
-            // return the index if found
-            Some(Ordering::Equal) => { return Some(idx); },
-            // If values[idx] is NAN, abort
-            None => { return None; },
+			// return the index if found
+			Some(Ordering::Equal) => { return Some(idx); },
+			// If values[idx] is NAN, abort
+			None => { return None; },
+		}
+        // If step == 1, we can't get any better 
+        // EXIT the loop
+        if step == 1 {
+            // Return closest between `values[idx]` and `values[idx+1]`
+            if idx < max_idx && (values[idx] - target_value).abs() > (values[idx+1] - target_value).abs() {
+                return Some(idx+1);
+            }
+            // Return closest between `values[idx]` and `values[idx-1]`
+            if idx > 0 && (values[idx] - target_value).abs() > (values[idx-1] - target_value).abs() {
+                return Some(idx -1);
+            }
+            return Some(idx);
         }
     }
 }
