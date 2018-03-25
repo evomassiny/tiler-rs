@@ -91,6 +91,11 @@ impl Renderer {
         colors
     }
 
+    /// Return the value stored at (lat, lon)
+    pub fn value_at_coordinates(&self, lat: f64, lon: f64) -> Result<f32,String> {
+        self.dataset.value_at_coordinates(lat, lon)
+    }
+
     /**
      * Render a Tile into an ImgTile.
      * 

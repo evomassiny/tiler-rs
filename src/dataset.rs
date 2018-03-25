@@ -1,6 +1,6 @@
 use netcdf;
 use netcdf::file::File as NcFile;
-use tile::{Tile,Bbox,lat_wgs84_to_meters,lon_wgs84_to_meters};
+use tile::{Tile,Bbox,wgs84_to_meters,lat_wgs84_to_meters,lon_wgs84_to_meters};
 //use tile::{Tile,LonLatBbox,lat_to_pixel,lon_to_pixel};
 use tiledata::TileData;
 use std::f32;
@@ -170,6 +170,29 @@ impl Dataset {
             );
         }
         Err("Error while fetching tile, no variable found".into())
+    }
+
+    /// Return the value stored at (lat, lon)
+    pub fn value_at_coordinates(&self, lat: f64, lon: f64) -> Result<f32, String> {
+        // transform (lat, lon) into Web Mercator (as self.lat and self.lon)
+        let (x, y) = wgs84_to_meters(lon, lat);
+        // fetch the closest point in the dataset
+        let lon_idx: usize = search_closest_idx(&self.lon, &x)
+            .ok_or_else(|| format!("longitude error"))?;
+        let lat_idx: usize = search_closest_idx(&self.lat, &y)
+            .ok_or_else(|| format!("latitude error"))?;
+        // extract it value
+        if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
+            let value: f32 = variable.value_at(&[lat_idx, lon_idx])?;
+            println!("{}, {}", &lat_idx, &lon_idx);
+            if let Some(fill_value) = self.get_fill_value() {
+                if value == fill_value {
+                    return Ok(f32::NAN);
+                }
+            }
+            return Ok(value);
+        }
+        Err("Dataset error".into())
     }
 }
 
