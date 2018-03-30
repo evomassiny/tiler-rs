@@ -47,6 +47,7 @@
 //!
 extern crate netcdf;
 extern crate image;
+extern crate regex;
 mod tile;
 mod colormap;
 mod scale;
@@ -57,7 +58,7 @@ mod utils;
 pub use tiledata::TileData;
 pub use renderer::{Renderer,ImgTile};
 pub use dataset::Dataset;
-pub use colormap::ColorMap;
+pub use colormap::{ColorMap,CustomColormap};
 pub use tile::Tile;
 pub use scale::*;
 

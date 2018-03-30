@@ -7,6 +7,8 @@ pub enum Scale {
     Log { min: f32, max: f32},
     /// Exponantial (ish) translation from a value range to a color range
     Exponential { min: f32, max: f32},
+    /// Apply no transformation
+    Equal,
 }
 
 #[inline] // Called once per pixel, I believe it make sense to inline it (might be wrong)
@@ -43,5 +45,6 @@ pub fn normalize(scale: &Scale, value: f32) -> f32 {
                 ((value - min) / (max - min)).exp() / (1_f32).exp()
             }
         },
+        &Scale::Equal => { value },
     }
 }
