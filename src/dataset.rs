@@ -96,6 +96,21 @@ impl Dataset {
     }
 
     /**
+     * Check if the point (lat, lon in WebMercator EPSG:3857)  is contained in the dataset extend.
+     */
+    fn contains_point(&self, lat: f64, lon: f64) -> bool {
+        let (lon_min, lon_max) = (self.lon[0], self.lon[self.lon.len() -1]);
+        let (lat_min, lat_max) = (self.lat[0], self.lat[self.lat.len() -1]);
+        if lon < lon_min || lon > lon_max {
+            return false;
+        }
+        if lat < lat_min || lat > lat_max {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Extract data from the netCDF dataset
      * and pack it into a TileData
      */
@@ -176,20 +191,22 @@ impl Dataset {
     pub fn value_at_coordinates(&self, lat: f64, lon: f64) -> Result<f32, String> {
         // transform (lat, lon) into Web Mercator (as self.lat and self.lon)
         let (x, y) = wgs84_to_meters(lon, lat);
-        // fetch the closest point in the dataset
-        let lon_idx: usize = search_closest_idx(&self.lon, &x)
-            .ok_or_else(|| format!("longitude error"))?;
-        let lat_idx: usize = search_closest_idx(&self.lat, &y)
-            .ok_or_else(|| format!("latitude error"))?;
-        // extract it value
-        if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
-            let value: f32 = variable.value_at(&[lat_idx, lon_idx])?;
-            if let Some(fill_value) = self.get_fill_value() {
-                if value == fill_value {
-                    return Ok(f32::NAN);
+        if self.contains_point(y, x) {
+            // fetch the closest point in the dataset
+            let lon_idx: usize = search_closest_idx(&self.lon, &x)
+                .ok_or_else(|| format!("longitude error"))?;
+            let lat_idx: usize = search_closest_idx(&self.lat, &y)
+                .ok_or_else(|| format!("latitude error"))?;
+            // extract it value
+            if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
+                let value: f32 = variable.value_at(&[lat_idx, lon_idx])?;
+                if let Some(fill_value) = self.get_fill_value() {
+                    if value == fill_value {
+                        return Ok(f32::NAN);
+                    }
                 }
+                return Ok(value);
             }
-            return Ok(value);
         }
         Err("Dataset error".into())
     }
