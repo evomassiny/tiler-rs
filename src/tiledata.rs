@@ -37,6 +37,18 @@ impl TileData {
             self.bbox.west + lon_inc * (0.5 + i as f64)
         }).collect();
 
+        // Find out values boundaries
+        let lat_min: f64 = self.lat[0] - 0.5 * lat_inc;
+        let lat_max: f64 = self.lat[self.lat.len() - 1] + 0.5 * lat_inc;
+        let lon_min: f64 = self.lon[0] - 0.5 * lon_inc;
+        let lon_max: f64 = self.lon[self.lon.len() - 1] + 0.5 * lon_inc;
+        // this closure returns true if the lon/lat coordinates 
+        // are included in the dataset
+        let in_value_extend = | lat: f64, lon: f64 | -> bool {
+            lat >= lat_min && lat <= lat_max && lon >= lon_min && lon <= lon_max
+        };
+
+
         // Build output values
         let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [
             [f32::NAN; TILE_SIZE];
@@ -48,14 +60,18 @@ impl TileData {
             // average the data contained in the pixel extend
             for (i_lat, lat) in lats.iter().enumerate() {
                 for (i_lon, lon) in lons.iter().enumerate() {
-                    values[i_lat][i_lon] = self.resample_average(*lat, *lon, lat_inc, lon_inc);
+                    if in_value_extend(*lat, *lon) {
+                        values[i_lat][i_lon] = self.resample_average(*lat, *lon, lat_inc, lon_inc);
+                    }
                 }
             }
         } else {
             // interpolate each pixel value
             for (i_lat, lat) in lats.iter().enumerate() {
                 for (i_lon, lon) in lons.iter().enumerate() {
-                    values[i_lat][i_lon] = self.interpolate_value_at(*lat, *lon);
+                    if in_value_extend(*lat, *lon) {
+                        values[i_lat][i_lon] = self.interpolate_value_at(*lat, *lon);
+                    }
                 }
             }
         }

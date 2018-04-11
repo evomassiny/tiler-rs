@@ -184,7 +184,6 @@ impl Dataset {
         // extract it value
         if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
             let value: f32 = variable.value_at(&[lat_idx, lon_idx])?;
-            println!("{}, {}", &lat_idx, &lon_idx);
             if let Some(fill_value) = self.get_fill_value() {
                 if value == fill_value {
                     return Ok(f32::NAN);
