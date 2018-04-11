@@ -130,7 +130,6 @@ pub enum ColorMap {
 }
 
 
-
 fn value_to_grayscale(value: f32) -> [u8; 3] {
     let gray = ((value * 255.) % 255.) as u8;
     [gray, gray, gray]

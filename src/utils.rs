@@ -1,10 +1,10 @@
 use std::cmp::Ordering;
 
-/// This function performs a binary search in a **sorted** vector
+/// This function performs a binary search in a **sorted** slice
 /// and returns the index of the closest element.
 /// 
 /// Returns None if it encounter an invalid value (NAN) or an empty vector
-pub fn search_closest_idx(values: &Vec<f64>, target_value: &f64) -> Option<usize> {
+pub fn search_closest_idx(values: &[f64], target_value: &f64) -> Option<usize> {
     // avoid invalid inputs
     if values.len() == 0 || target_value.is_nan() {
         return None;

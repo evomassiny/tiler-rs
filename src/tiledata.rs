@@ -130,7 +130,7 @@ impl TileData {
     /// This function fetch and interpolate the data from self.value, self.lon, self.lat
     /// at the requested lat / lon.
     /// It basically performs a bilinear interpolation
-    fn interpolate_value_at( &self, requested_lat: f64, requested_lon: f64) ->  f32 {
+    fn interpolate_value_at(&self, requested_lat: f64, requested_lon: f64) ->  f32 {
         // fetch nearest longitude / latitude indices
         let lat_idx = search_closest_idx(&self.lat, &requested_lat).unwrap();
         let lon_idx = search_closest_idx(&self.lon, &requested_lon).unwrap();
