@@ -8,18 +8,18 @@ const PERIMETER: f64 = EARTH_RADIUS * 2. *  consts::PI;
  * Turns WGS 84 coordinates into WebMercator
  * tiles numbering
  */
-pub fn lon_lat_to_tile(lon: f64, lat: f64, zoom: u16) -> (u16, u16, u16) {
+pub fn lon_lat_to_tile(lon: f64, lat: f64, zoom: u32) -> (u32, u32, u32) {
     let lat = lat.to_radians();
     let n = 2_f64.powf(zoom as f64);
     let xtile: f64 = ((lon + 180.0) / 360.0) * n;
     let ytile: f64 = (1.0 - (lat.tan() + (1.0 / lat.cos())).ln() / consts::PI) / 2.0 * n;
-    (xtile.floor() as u16, ytile.floor() as u16, zoom)
+    (xtile.floor() as u32, ytile.floor() as u32, zoom)
 }
 
 /**
  * Turns WebMercator coordinates into WGS 84 coordinates
  */
-pub fn tile_to_wgs84(x: u16, y: u16, z: u16) -> (f64, f64){
+pub fn tile_to_wgs84(x: u32, y: u32, z: u32) -> (f64, f64){
     let (x, y) = (x as f64, y as f64);
     let n = 2_f64.powf(z as f64);
     let lon_deg = x / n * 360.0 - 180.0;
@@ -30,7 +30,7 @@ pub fn tile_to_wgs84(x: u16, y: u16, z: u16) -> (f64, f64){
 /**
  * Turns tiles coordinates into WebMercator (EPSG:3857)
  */
-pub fn tile_to_3857(x: u16, y: u16, z: u16) -> (f64, f64){
+pub fn tile_to_3857(x: u32, y: u32, z: u32) -> (f64, f64){
     let (x, y) = (x as f64, y as f64);
     let n = 2_f64.powf(z as f64);
     let resolution = PERIMETER / n;
@@ -96,11 +96,11 @@ pub struct Bbox {
 #[derive(Debug, PartialEq)]
 pub struct Tile {
     /// `x` coordinate of a tile
-    pub x: u16,
+    pub x: u32,
     /// `y` coordinate of a tile
-    pub y: u16,
+    pub y: u32,
     /// zoom level, (from 0 to 19 included)
-    pub z: u16,
+    pub z: u32,
 }
 impl Tile {
     /**

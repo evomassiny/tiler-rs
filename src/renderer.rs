@@ -14,11 +14,11 @@ pub struct ImgTile {
     /// Array of pixel values (flattened) 
     pub pixels: [u8; 4 * TILE_SIZE * TILE_SIZE],
     /// Web mercator x coordinate of the tile
-    pub x: u16,
+    pub x: u32,
     /// Web mercator y coordinate of the tile
-    pub y: u16,
+    pub y: u32,
     /// Zoom level
-    pub z: u16,
+    pub z: u32,
 }
 impl ImgTile {
     /// Export the ImgTile as a PNG file.
