@@ -28,7 +28,7 @@ fn main() {
         tiler::ColorMap::RdYlBu_r   // Red Yellow Blue colormap
     ).unwrap();
 
-    let mut max: u16 = 2;
+    let mut max: u32 = 2;
     // iter Zoom level
     for z in 0..5 {
         println!("Rendering zoom level {}", &z);
