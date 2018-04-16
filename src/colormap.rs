@@ -115,8 +115,10 @@ impl CustomColormap {
 /// 
 #[allow(non_camel_case_types)]
 pub enum ColorMap {
-    /// black to gray colorMap
+    /// black to white colorMap
     Grayscale,
+    /// white to black colorMap
+    Grayscale_r,
     /// Red Yellow Blue colorMap
     RdYlBu,
     /// Reversed Red Yellow Blue ColorMap
@@ -173,6 +175,7 @@ fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
 pub fn rgb(value: f32, color_map: &ColorMap) -> [u8; 3] {
     match *color_map {
         ColorMap::Grayscale => { value_to_grayscale(value) },
+        ColorMap::Grayscale_r => { value_to_grayscale(1. - value) },
         ColorMap::RdYlBu => { 
             value_to_color(value, &RD_TL_BU_DATA, false)
         },
