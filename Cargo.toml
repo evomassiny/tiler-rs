@@ -6,4 +6,4 @@ authors = ["evomassiny <hanzohatory@gamil.com>"]
 [dependencies]
 netcdf = { git = "https://github.com/mhiley/rust-netcdf", branch = "master" }
 image = "*"
-regex = "0.2"
+regex = "1.0"
