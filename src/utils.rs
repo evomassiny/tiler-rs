@@ -5,6 +5,9 @@ use std::cmp::Ordering;
 /// 
 /// Returns None if it encounter an invalid value (NAN) or an empty vector
 pub fn search_closest_idx(values: &[f64], target_value: &f64) -> Option<usize> {
+    // this function performs a dichotomie search on `target_value` inside `values`
+    // basically like "the price is right".
+
     // avoid invalid inputs
     if values.len() == 0 || target_value.is_nan() {
         return None;
@@ -17,26 +20,23 @@ pub fn search_closest_idx(values: &[f64], target_value: &f64) -> Option<usize> {
     // Perform a binary search (i.e dichotomie)
 	loop {
         // update the interval length
+        // we add one to handle odd values
         step = (1 + step) / 2;
 		match (values[idx]).partial_cmp(target_value) {
+            // increment `idx` of `step`
 			Some(Ordering::Less) => {
-                if idx < max_idx - step {
-                    idx += step;
-                } else {
-                    idx = max_idx;
-                }
+                // avoid out-of-bound index 
+                idx = max_idx.min(idx + step);
             },
+            // decrement `idx` of `step`
 			Some(Ordering::Greater) => { 
-                if idx > step {
-                    idx -= step;
-                } else {
-                    idx = 0;
-                }
+                // avoid out-of-bound index and overflow
+                idx = if idx > step { idx - step } else { 0 };
             },
-			// return the index if found
-			Some(Ordering::Equal) => { return Some(idx); },
+			// return the exact index if found
+			Some(Ordering::Equal) => return Some(idx),
 			// If values[idx] is NAN, abort
-			None => { return None; },
+			None => return None,
 		}
         // If step == 1, we can't get any better 
         // EXIT the loop
