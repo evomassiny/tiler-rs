@@ -1,7 +1,6 @@
 use tile::{Tile,Bbox};
-use std::cmp::min;
 use std::f32;
-use utils::search_closest_idx;
+use utils::{search_closest_idx,search_closest_idx_below,search_closest_idx_over};
 
 pub const TILE_SIZE: usize = 256;
 
@@ -50,7 +49,7 @@ impl TileData {
         };
 
         // Build output values as a boxed array
-        // otherwise it won't fit on the stack.
+        // otherwise it won't fit on the stack and may trigger a stackoverflow.
         let mut values = Box::new([[f32::NAN; TILE_SIZE]; TILE_SIZE]);
         // directly average the nearest data or interpole it
         // depending of the number of data available
@@ -82,11 +81,11 @@ impl TileData {
         // get the index ot the lowest bound
         let min_lat_idx = search_closest_idx(
             &self.lat,
-            &(requested_lat - lat_inc / 2.)
+            requested_lat - lat_inc / 2.
         ).unwrap();
         let min_lon_idx = search_closest_idx(
             &self.lon,
-            &(requested_lon - lon_inc / 2.)
+            requested_lon - lon_inc / 2.
         ).unwrap();
 
         // get the index ot the highest bound
@@ -130,8 +129,8 @@ impl TileData {
     /// It basically performs a bilinear interpolation
     fn interpolate_value_at(&self, requested_lat: f64, requested_lon: f64) ->  f32 {
         // fetch nearest longitude / latitude indices
-        let lat_idx = search_closest_idx(&self.lat, &requested_lat).unwrap();
-        let lon_idx = search_closest_idx(&self.lon, &requested_lon).unwrap();
+        let lat_idx = search_closest_idx(&self.lat, requested_lat).unwrap();
+        let lon_idx = search_closest_idx(&self.lon, requested_lon).unwrap();
 
         // see if we can interpolate the data, we need 4 points inside the bounding
         // box of self.lon and self.lat
@@ -158,9 +157,15 @@ impl TileData {
 
         // get the indices of the other points needed to interpolate
         let other_lon_idx: usize = if requested_lon > self.lon[lon_idx] {
-            lon_idx +1 } else { lon_idx -1 }; 
+            lon_idx +1 
+        } else if lon_idx > 0 { 
+            lon_idx -1 
+        } else { 0 }; 
         let other_lat_idx: usize = if requested_lat > self.lat[lat_idx] {
-            lat_idx +1 } else { lat_idx -1 }; 
+            lat_idx +1 
+        } else if lat_idx > 0 {
+            lat_idx -1 
+        } else { 0 }; 
 
         if can_interp_lon && can_interp_lat {
             // First interpolate linearly the 4 points at the requested longitude
@@ -225,49 +230,22 @@ impl TileData {
         let z = self.tile.z + 1;
         for x in  base_x..(base_x + 2) {
             for y in base_y..(base_y + 2) {
-                let tile = Tile { x: x, y: y, z: z };
+                let tile = Tile {x, y, z};
                 let xy = tile.xy_bounds();
 
-                // get min latitude index
-                let mut i_lat_min: usize = 0;
-                for (i, lat) in self.lat.iter().enumerate() {
-                    if *lat >= xy.south {
-                        i_lat_min = if i > 0 { i - 1 } else { 0 };
-                        break;
-                    }
-                }
-                // get max latitude index
-                let mut i_lat_max: usize = 0;
-                for (i, lat) in self.lat.iter().rev().enumerate() {
-                    if *lat <= xy.north {
-                        i_lat_max = if i != (self.lat.len() - 1 ) { self.lat.len() - i } else { self.lat.len() -1 };
-                        break;
-                    }
-                }
-                
-                // get min longitude index
-                let mut i_lon_min: usize = 0;
-                for (i, lon) in self.lon.iter().enumerate() {
-                    if *lon >= xy.west {
-                        i_lon_min = if i > 0 { i - 1 } else { 0 };
-                        break;
-                    }
-                }
-                // get max longitude index
-                let mut i_lon_max: usize = 0;
-                for (i, lon) in self.lon.iter().rev().enumerate() {
-                    if *lon <= xy.east {
-                        i_lon_max = if i != (self.lon.len() - 1 ) { self.lon.len() - i } else { self.lon.len() -1 };
-                        break;
-                    }
-                }
+                // search closest indices
+                let i_lat_min = search_closest_idx_below(&self.lat, xy.south).unwrap();
+                let i_lat_max = search_closest_idx_over(&self.lat, xy.north).unwrap();
+                let i_lon_min = search_closest_idx_below(&self.lon, xy.west).unwrap();
+                let i_lon_max = search_closest_idx_over(&self.lon, xy.east).unwrap();
 
                 // Extract lat, lon and values using the computed indices
-                let subset_lat: Vec<f64> = self.lat[i_lat_min..min(i_lat_max +1, self.lat.len() -1)].to_vec();
-                let subset_lon: Vec<f64> = self.lon[i_lon_min..min(i_lon_max +1, self.lon.len() -1)].to_vec();
+                let subset_lat: Vec<f64> = self.lat[i_lat_min..(i_lat_max +1)].to_vec();
+                let subset_lon: Vec<f64> = self.lon[i_lon_min..(i_lon_max +1)].to_vec();
                 let mut subset_values: Vec<f32> = Vec::with_capacity(subset_lat.len() * subset_lon.len());
-                for i_lat in i_lat_min..min(i_lat_max +1, self.lat.len() -1) {
-                    for i_lon in i_lon_min..min(i_lon_max +1, self.lon.len() -1) {
+
+                for i_lat in i_lat_min..(i_lat_max +1) {
+                    for i_lon in i_lon_min..(i_lon_max +1) {
                         subset_values.push(self.value_at(i_lat, i_lon));
                     }
                 }

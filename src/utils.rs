@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 /// and returns the index of the closest element.
 /// 
 /// Returns None if it encounter an invalid value (NAN) or an empty vector
-pub fn search_closest_idx(values: &[f64], target_value: &f64) -> Option<usize> {
+pub fn search_closest_idx(values: &[f64], target_value: f64) -> Option<usize> {
     // this function performs a dichotomie search on `target_value` inside `values`
     // basically like "the price is right".
 
@@ -22,7 +22,7 @@ pub fn search_closest_idx(values: &[f64], target_value: &f64) -> Option<usize> {
         // update the interval length
         // we add one to handle odd values
         step = (1 + step) / 2;
-		match (values[idx]).partial_cmp(target_value) {
+		match (values[idx]).partial_cmp(&target_value) {
             // increment `idx` of `step`
 			Some(Ordering::Less) => {
                 // avoid out-of-bound index 
@@ -54,14 +54,64 @@ pub fn search_closest_idx(values: &[f64], target_value: &f64) -> Option<usize> {
     }
 }
 
+/// This function performs a binary search in a **sorted** slice
+/// and returns the index of the closest element **inferior** than target_value.
+/// 
+/// Returns None if it encounter an invalid value (NAN) or an empty vector
+pub fn search_closest_idx_below(values: &[f64], target_value: f64) -> Option<usize> {
+    match  search_closest_idx(values, target_value) {
+        Some(idx) => {
+            if idx > 0 && values[idx] > target_value {
+                Some(idx - 1)
+            } else {
+                Some(idx)
+            }
+        },
+        None => None
+    }
+}
+
+/// This function performs a binary search in a **sorted** slice
+/// and returns the index of the closest element **superior** than target_value.
+/// 
+/// Returns None if it encounter an invalid value (NAN) or an empty vector
+pub fn search_closest_idx_over(values: &[f64], target_value: f64) -> Option<usize> {
+    match  search_closest_idx(values, target_value) {
+        Some(idx) => {
+            if idx < values.len() -1 && values[idx] < target_value {
+                Some(idx + 1)
+            } else {
+                Some(idx)
+            }
+        },
+        None => None
+    }
+}
+
 #[test]
 fn test_binary_search() {
     let values: Vec<f64> = vec![1., 3., 3.5, 5., 5.1, 6., 8., 11.];
     // search a value exactly equals to one of element
-    assert_eq!(search_closest_idx(&values, &3_f64), Some(1_usize));
+    assert_eq!(search_closest_idx(&values, 3_f64), Some(1_usize));
     // search a value not in the set
-    assert_eq!(search_closest_idx(&values, &5.2), Some(4_usize));
+    assert_eq!(search_closest_idx(&values, 5.2), Some(4_usize));
     // search values outside the set ranges
-    assert_eq!(search_closest_idx(&values, &-3.), Some(0_usize));
-    assert_eq!(search_closest_idx(&values, &100.), Some(values.len() -1));
+    assert_eq!(search_closest_idx(&values, -3.), Some(0_usize));
+    assert_eq!(search_closest_idx(&values, 100.), Some(values.len() -1));
+}
+
+#[test]
+fn test_binary_search_below() {
+    let values: Vec<f64> = vec![1., 2., 3., 4.];
+    assert_eq!(search_closest_idx_below(&values, 2.9_f64), Some(1_usize));
+    // out of bound check
+    assert_eq!(search_closest_idx_below(&values, 0.5), Some(0_usize));
+}
+
+#[test]
+fn test_binary_search_over() {
+    let values: Vec<f64> = vec![1., 2., 3., 4.];
+    assert_eq!(search_closest_idx_over(&values, 2.1_f64), Some(2_usize));
+    // out of bound check
+    assert_eq!(search_closest_idx_over(&values, 4.9_f64), Some(3_usize));
 }

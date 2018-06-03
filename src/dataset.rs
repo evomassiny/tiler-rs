@@ -4,7 +4,7 @@ use tile::{Tile,Bbox,wgs84_to_meters,lat_wgs84_to_meters,lon_wgs84_to_meters};
 //use tile::{Tile,LonLatBbox,lat_to_pixel,lon_to_pixel};
 use tiledata::TileData;
 use std::f32;
-use utils::search_closest_idx;
+use utils::{search_closest_idx,search_closest_idx_below,search_closest_idx_over};
 
 /// This Struct provides access to the data within a netCDF file.
 pub struct Dataset {
@@ -121,28 +121,15 @@ impl Dataset {
         }
 
         // get longitude indices containing the tile data
-        let mut i_lon_min: usize = search_closest_idx(&self.lon, &bbox.west)
+        let i_lon_min: usize = search_closest_idx_below(&self.lon, bbox.west)
             .ok_or(format!("Longitude error"))?; 
-        if i_lon_min > 0 && bbox.west <= self.lon[i_lon_min] {
-            i_lon_min -= 1;
-        }
-        let mut i_lon_max: usize = search_closest_idx(&self.lon, &bbox.east)
+        let i_lon_max: usize = search_closest_idx_over(&self.lon, bbox.east)
             .ok_or(format!("Longitude error"))?; 
-        if i_lon_max != (self.lon.len() -1) && bbox.east >= self.lon[i_lon_max] {
-            i_lon_max += 1;
-        }
         // get latitude indices containing the tile data
-        let mut i_lat_min: usize = search_closest_idx(&self.lat, &bbox.south)
+        let i_lat_min: usize = search_closest_idx_below(&self.lat, bbox.south)
             .ok_or(format!("Latitude error"))?; 
-        if i_lat_min > 0 && bbox.south <= self.lat[i_lat_min] {
-            i_lat_min -= 1;
-        }
-        let mut i_lat_max: usize = search_closest_idx(&self.lat, &bbox.north)
+        let i_lat_max: usize = search_closest_idx_over(&self.lat, bbox.north)
             .ok_or(format!("Latitude error"))?; 
-        if i_lat_max != (self.lat.len() -1) && bbox.north >= self.lat[i_lat_max] {
-            i_lat_max += 1;
-        }
-
         // Extract data from the netCDF Dataset
         if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
             
@@ -193,9 +180,9 @@ impl Dataset {
         let (x, y) = wgs84_to_meters(lon, lat);
         if self.contains_point(y, x) {
             // fetch the closest point in the dataset
-            let lon_idx: usize = search_closest_idx(&self.lon, &x)
+            let lon_idx: usize = search_closest_idx(&self.lon, x)
                 .ok_or_else(|| format!("longitude error"))?;
-            let lat_idx: usize = search_closest_idx(&self.lat, &y)
+            let lat_idx: usize = search_closest_idx(&self.lat, y)
                 .ok_or_else(|| format!("latitude error"))?;
             // extract it value
             if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
