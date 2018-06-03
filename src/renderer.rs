@@ -22,9 +22,9 @@ pub struct ImgTile {
 }
 impl ImgTile {
     /// Export the ImgTile as a PNG file.
-    pub fn save(&self, path: &str) {
+    pub fn save<P: AsRef<Path>>(&self, path: P) {
         let _ = image::save_buffer(
-            &Path::new(path),
+            path.as_ref(),
             &self.pixels,
             TILE_SIZE as u32,
             TILE_SIZE as u32,
