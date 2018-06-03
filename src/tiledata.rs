@@ -22,8 +22,9 @@ impl TileData {
 
     /**
      * regrid self.values into a TILE_SIZE x TILE_SIZE grid.
+     * 
      */
-    pub fn to_tile_grid(&self) -> [[f32; TILE_SIZE]; TILE_SIZE] {
+    pub fn to_tile_grid(&self) -> Box<[[f32; TILE_SIZE]; TILE_SIZE]> {
 
         // Build latitude needed for each pixel
         let lat_inc: f64 = (self.bbox.north -self.bbox.south) / (TILE_SIZE as f64);
@@ -48,12 +49,9 @@ impl TileData {
             lat >= lat_min && lat <= lat_max && lon >= lon_min && lon <= lon_max
         };
 
-
-        // Build output values
-        let mut values: [[f32; TILE_SIZE]; TILE_SIZE] = [
-            [f32::NAN; TILE_SIZE];
-            TILE_SIZE
-        ];
+        // Build output values as a boxed array
+        // otherwise it won't fit on the stack.
+        let mut values = Box::new([[f32::NAN; TILE_SIZE]; TILE_SIZE]);
         // directly average the nearest data or interpole it
         // depending of the number of data available
         if self.values.len() > TILE_SIZE * TILE_SIZE {

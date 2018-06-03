@@ -12,7 +12,7 @@ use image;
 /// an image file (PNG) from it.
 pub struct ImgTile {
     /// Array of pixel values (flattened) 
-    pub pixels: [u8; 4 * TILE_SIZE * TILE_SIZE],
+    pub pixels: Box<[u8; 4 * TILE_SIZE * TILE_SIZE]>,
     /// Web mercator x coordinate of the tile
     pub x: u32,
     /// Web mercator y coordinate of the tile
@@ -25,7 +25,7 @@ impl ImgTile {
     pub fn save<P: AsRef<Path>>(&self, path: P) {
         let _ = image::save_buffer(
             path.as_ref(),
-            &self.pixels,
+            &*self.pixels, // '*' to unbox and '&' to get a &[] 
             TILE_SIZE as u32,
             TILE_SIZE as u32,
             image::RGBA(8)
@@ -73,9 +73,11 @@ impl Renderer {
         [rgb[0], rgb[1], rgb[2], 255u8]
     }
 
-    fn values_to_colors(&self, values: [[f32; TILE_SIZE]; TILE_SIZE])
-            -> [u8; 4 * TILE_SIZE * TILE_SIZE] {
-        let mut colors = [0u8; 4* TILE_SIZE * TILE_SIZE];
+    fn values_to_colors(&self, values: &[[f32; TILE_SIZE]; TILE_SIZE])
+            -> Box<[u8; 4 * TILE_SIZE * TILE_SIZE]> {
+        // Build output values as a boxed array
+        // otherwise it won't fit on the stack and may trigger a stackoverflow.
+        let mut colors = Box::new([0u8; 4* TILE_SIZE * TILE_SIZE]);
         let mut count: usize = 0;
         // iter latitude in reverse, to fit the image X,Y orientation
         for i_lat in (0..TILE_SIZE).rev() {
@@ -108,7 +110,7 @@ impl Renderer {
     pub fn render_tile(&self, tile: &Tile) -> Result<ImgTile, String> {
         let tile_data = self.dataset.get_tile_data(tile)?;
         let data = tile_data.to_tile_grid();
-        let colors = self.values_to_colors(data);
+        let colors = self.values_to_colors(&data);
         Ok(
             ImgTile {
                 pixels: colors,
@@ -125,7 +127,7 @@ impl Renderer {
         let mut imgs: Vec<ImgTile> = Vec::new();
         imgs.push(
             ImgTile {
-                pixels: self.values_to_colors(data.to_tile_grid()),
+                pixels: self.values_to_colors(&data.to_tile_grid()),
                 x: data.tile.x,
                 y: data.tile.y,
                 z: data.tile.z,
