@@ -36,7 +36,7 @@ const BR_BG_DATA: [[f32; 3]; 11] = [
 /// It should directly map values to colors
 pub struct CustomColormap {
     values: Vec<f32>,
-    colors: Vec<[u8; 3]>
+    colors: Vec<[u8; 4]>
 }
 impl CustomColormap {
 
@@ -47,13 +47,13 @@ impl CustomColormap {
     pub fn from_qgis_file(file: &str) -> Result<ColorMap, String> {
         let file = File::open(file).map_err(|e| e.to_string())?;
         let mut reader = BufReader::new(file);
-        let mut colors: Vec<[u8; 3]> = Vec::new();
+        let mut colors: Vec<[u8; 4]> = Vec::new();
         let mut values: Vec<f32> = Vec::new();
         let mut line = String::new();
 
         // match a QGIS colormap value
         let data_regex =  Regex::new(
-            r"^(?P<value>\d+),(?P<red>\d+),(?P<green>\d+),(?P<blue>\d+),\d+,\d+(\.\d*)?\s*$"
+            r"^(?P<value>\d+),(?P<red>\d+),(?P<green>\d+),(?P<blue>\d+),(?P<alpha>\d+),\d+(\.\d*)?\s*$"
         ).unwrap();
         // Iter line of the file
         while let Ok(bytes_read) = reader.read_line(&mut line) {
@@ -64,7 +64,8 @@ impl CustomColormap {
                 let red: u8 = capture.name("red").unwrap().as_str().parse::<u8>().unwrap();
                 let green: u8 = capture.name("green").unwrap().as_str().parse::<u8>().unwrap();
                 let blue: u8 = capture.name("blue").unwrap().as_str().parse::<u8>().unwrap();
-                colors.push([red, green, blue]);
+                let alpha: u8 = capture.name("alpha").unwrap().as_str().parse::<u8>().unwrap();
+                colors.push([red, green, blue, alpha]);
                 values.push(value);
             }
             line.clear();
@@ -81,7 +82,7 @@ impl CustomColormap {
     }
 
     /// returns a pixel value, from a dataset value.
-    fn value_to_color(&self, value: f32) -> [u8; 3] {
+    fn value_to_color(&self, value: f32) -> [u8; 4] {
         if self.values.len() == 1 || self.values[0] >= value {
             return self.colors[self.values.len() -1];
         }
@@ -93,19 +94,19 @@ impl CustomColormap {
                 return self.colors[i];
             }
             if value > self.values[i] && value < self.values[i + 1] {
-                let mut rgb: [u8; 3] = [0; 3];
+                let mut rgba: [u8; 4] = [0; 4];
                 let lower_diff = value - self.values[i];
                 let upper_diff = self.values[i+1] - value;
                 let diff = self.values[i+1] - self.values[i];
-                for j in 0..rgb.len() {
-                    rgb[j] = ((
+                for j in 0..rgba.len() {
+                    rgba[j] = ((
                           self.colors[i][j] as f32 * upper_diff + self.colors[i+1][j] as f32 * lower_diff
                        ) / diff ) as u8;
                 }
-                return rgb;
+                return rgba;
             }
         }
-        [22; 3]
+        [0u8; 4]
     }
 }
 
@@ -132,16 +133,16 @@ pub enum ColorMap {
 }
 
 
-fn value_to_grayscale(value: f32) -> [u8; 3] {
+fn value_to_grayscale(value: f32) -> [u8; 4] {
     let gray = ((value * 255.) % 255.) as u8;
-    [gray, gray, gray]
+    [gray, gray, gray, 255u8]
 }
 
 /**
  * Returns pixel colors from a value (between 0 and 1),
  * It linearly interpolate the color between the colors defined in `data`
  */
-fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
+fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 4] {
     // reverse the value if asked
     let scaled: f32 = if reverse {
         (1. - value) * ((data.len() -1) as f32)
@@ -165,14 +166,14 @@ fn value_to_color(value: f32, data: &[[f32; 3]], reverse: bool) -> [u8; 3] {
             rgb[i] = ((data[idx][i] * (1. - weight) + weight * data[idx + 1][i]) * 255.) as u8;
         }
     }
-    rgb
+    [rgb[0], rgb[1], rgb[2], 255u8]
 }
 
 /**
  * Returns a pixel color from a [0; 1] f32 value
  * and a ColorMap variant
  */
-pub fn rgb(value: f32, color_map: &ColorMap) -> [u8; 3] {
+pub fn rgba(value: f32, color_map: &ColorMap) -> [u8; 4] {
     match *color_map {
         ColorMap::Grayscale => { value_to_grayscale(value) },
         ColorMap::Grayscale_r => { value_to_grayscale(1. - value) },
@@ -203,14 +204,14 @@ fn test_colormap_interpolation() {
         [1., 1., 1.],
     ];
     // test interpolation for 0, 0.5 and 1
-    assert_eq!(value_to_color(0., &data, false), [0u8; 3]);
-    assert_eq!(value_to_color(1., &data, false), [255u8; 3]);
-    assert_eq!(value_to_color(0.5, &data, false), [(255 / 2) as u8; 3]);
+    assert_eq!(value_to_color(0., &data, false)[..3], [0u8; 3]);
+    assert_eq!(value_to_color(1., &data, false)[..3], [255u8; 3]);
+    assert_eq!(value_to_color(0.5, &data, false)[..3], [(255 / 2) as u8; 3]);
     
     // test interpolation for 0, 0.5 and 1 with revesed colormap
-    assert_eq!(value_to_color(0., &data, true), [255u8; 3]);
-    assert_eq!(value_to_color(1., &data, true), [0u8; 3]);
-    assert_eq!(value_to_color(0.5, &data, true), [(255 / 2) as u8; 3]);
+    assert_eq!(value_to_color(0., &data, true)[..3], [255u8; 3]);
+    assert_eq!(value_to_color(1., &data, true)[..3], [0u8; 3]);
+    assert_eq!(value_to_color(0.5, &data, true)[..3], [(255 / 2) as u8; 3]);
 }
 
 #[test]

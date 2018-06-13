@@ -3,7 +3,7 @@ use dataset::Dataset;
 use tiledata::{TILE_SIZE};
 use tile::Tile;
 use tiledata::TileData;
-use colormap::{ColorMap,rgb};
+use colormap::{ColorMap,rgba};
 use scale::{Scale,normalize};
 use image;
 
@@ -69,8 +69,9 @@ impl Renderer {
             return [0u8, 0u8, 0u8, 0u8];
         }
         let scaled_value = normalize(&self.scale, value);
-        let rgb = rgb(scaled_value, &self.color_map);
-        [rgb[0], rgb[1], rgb[2], 255u8]
+        let rgba = rgba(scaled_value, &self.color_map);
+        //[rgb[0], rgb[1], rgb[2], 255u8]
+        rgba
     }
 
     fn values_to_colors(&self, values: &[[f32; TILE_SIZE]; TILE_SIZE])
