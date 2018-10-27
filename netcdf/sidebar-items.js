@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["test_file",""],["test_file_new",""]],"mod":[["attribute",""],["dimension",""],["file",""],["group",""],["variable",""]],"struct":[["NC_ERRORS",""]]});

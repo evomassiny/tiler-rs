@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `tiler` crate."><meta name="keywords" content="rust, rustlang, rust-lang, tiler"><title>tiler - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><p class='location'>Crate tiler</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'tiler', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/tiler/lib.rs.html#1-63' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>tiler</a></span></h1><div class='docblock'><p>A netCDF to tile converter.
+This crate provides basic methods to export a netCDF gridded dataset
+into PNG tiles, suited for interactive web maps.</p>
+<h1 id="usage" class="section-header"><a href="#usage">Usage</a></h1>
+<p>In order to export a netCDF file into PNGs you need to create 2 objects:</p>
+<ul>
+<li>A <code>Dataset</code> which hold informations about a netCDF file, such as:
+<ul>
+<li>the <em>longitude</em> and <em>latitude</em> dimension name,</li>
+<li>the main <em>variable name</em>, (the one you which to render),</li>
+<li>the netCDF file <em>path</em>.</li>
+</ul>
+</li>
+<li>A <code>Renderer</code> which provides convenient functions to render a <code>Dataset</code>
+into tile images.</li>
+</ul>
+<p>Here is a simple example:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="comment">// Create a dataset from a netCDF file</span>
+<span class="kw">let</span> <span class="ident">dataset</span> <span class="op">=</span> <span class="ident">tiler</span>::<span class="ident">Dataset</span>::<span class="ident">new</span>(
+    <span class="string">&quot;latitude&quot;</span>,         <span class="comment">// Name of the latitude dimension</span>
+    <span class="string">&quot;longitude&quot;</span>,        <span class="comment">// Name of the longitude dimension</span>
+    <span class="string">&quot;wind_magnitude&quot;</span>,   <span class="comment">// Name of the latitude dimension</span>
+    <span class="string">&quot;./examples_data/wind_magnitude_reduced.nc&quot;</span> <span class="comment">// Path to a dataset</span>
+).<span class="ident">unwrap</span>();
+ 
+<span class="comment">// Create a renderer</span>
+<span class="kw">let</span> <span class="ident">renderer</span> <span class="op">=</span> <span class="ident">tiler</span>::<span class="ident">Renderer</span>::<span class="ident">from_dataset</span>(
+    <span class="ident">dataset</span>,        <span class="comment">// input dataset</span>
+    <span class="ident">tiler</span>::<span class="ident">Scale</span>::<span class="ident">Linear</span> { <span class="comment">// Use a linear range of color</span>
+        <span class="ident">min</span>: <span class="number">0.</span>, <span class="comment">// minimum value of the colorbar</span>
+        <span class="ident">max</span>: <span class="number">20.</span>  <span class="comment">// maximum value of the colorbar </span>
+    },
+    <span class="ident">tiler</span>::<span class="ident">ColorMap</span>::<span class="ident">RdYlBu_r</span>   <span class="comment">// The ColorMap you want to use, (Red Yellow Blue)</span>
+).<span class="ident">unwrap</span>();
+ 
+<span class="comment">// create a Tile Struct</span>
+<span class="kw">let</span> <span class="ident">tile</span> <span class="op">=</span> <span class="ident">tiler</span>::<span class="ident">Tile</span> {<span class="ident">x</span>: <span class="number">0</span>, <span class="ident">y</span>: <span class="number">0</span>, <span class="ident">z</span>: <span class="number">0</span> };
+ 
+<span class="comment">// render it into an image (TileImg)</span>
+<span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">img</span>) <span class="op">=</span> <span class="ident">renderer</span>.<span class="ident">render_tile</span>(<span class="kw-2">&amp;</span><span class="ident">tile</span>) {
+    <span class="comment">// save it as a png file</span>
+    <span class="ident">img</span>.<span class="ident">save</span>(<span class="string">&quot;./tile_0_0_0.png&quot;</span>);
+}</pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CustomColormap.html"
+                                  title='struct tiler::CustomColormap'>CustomColormap</a></td>
+                           <td class='docblock-short'>
+                                <p>This struct represents a user defined color map,
+It should directly map values to colors</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Dataset.html"
+                                  title='struct tiler::Dataset'>Dataset</a></td>
+                           <td class='docblock-short'>
+                                <p>This Struct provides access to the data within a netCDF file.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ImgTile.html"
+                                  title='struct tiler::ImgTile'>ImgTile</a></td>
+                           <td class='docblock-short'>
+                                <p>This struct represents an image tile,
+it holds all the pixel values needed to build
+an image file (PNG) from it.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Renderer.html"
+                                  title='struct tiler::Renderer'>Renderer</a></td>
+                           <td class='docblock-short'>
+                                <p>Provides convenient functions to render a <code>Dataset</code> instance into <code>ImgTile</code>s</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Tile.html"
+                                  title='struct tiler::Tile'>Tile</a></td>
+                           <td class='docblock-short'>
+                                <p>This struct holds basic informations about a Tile.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.TileData.html"
+                                  title='struct tiler::TileData'>TileData</a></td>
+                           <td class='docblock-short'>
+                                <p>Holds data and provides methods to regrid data into a 256 x 256 grid.</p>
+
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ColorMap.html"
+                                  title='enum tiler::ColorMap'>ColorMap</a></td>
+                           <td class='docblock-short'>
+                                <p>Defines values to color association.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Scale.html"
+                                  title='enum tiler::Scale'>Scale</a></td>
+                           <td class='docblock-short'>
+                                <p>Enum that describes how the
+transcription from a value to a color is done.</p>
+
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.normalize.html"
+                                  title='fn tiler::normalize'>normalize</a></td>
+                           <td class='docblock-short'>
+                                <p>Describe how a value will be translated to a color domain</p>
+
+                           </td>
+                       </tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "tiler";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

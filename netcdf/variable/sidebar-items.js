@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["init_variable","Creates and add a `Variable` Objects, from the dataset"],["init_variables",""]],"struct":[["Variable","This struct defines a netCDF variable."]],"trait":[["Numeric","This trait allow an implicit cast when fetching  a netCDF variable"]]});

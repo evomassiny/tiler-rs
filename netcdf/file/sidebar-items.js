@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["append","Open a netCDF file in append mode (read/write). The file must already exist."],["create","Open a netCDF file in creation mode (write only)."],["open","Open a netCDF file in read only mode."]],"struct":[["File",""]]});
