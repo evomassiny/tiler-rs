@@ -10,8 +10,12 @@ use utils::{search_closest_idx,search_closest_idx_below,search_closest_idx_over}
 pub struct Dataset {
     // meter (Web Mercator)
     lat: Vec<f64>,
+    min_lat: f64,
+    max_lat: f64,
     // meter (Web Mercator)
     lon: Vec<f64>,
+    min_lon: f64,
+    max_lon: f64,
     variable_name: String,
     file: NcFile,
 }
@@ -53,7 +57,11 @@ impl Dataset {
         }
         Ok(
             Self {
+                min_lat: lat[0].min(lat[lat.len() -1]),
+                max_lat: lat[0].max(lat[lat.len() -1]),
                 lat: lat,
+                min_lon: lon[0].min(lon[lon.len() -1]),
+                max_lon: lon[0].max(lon[lon.len() -1]),
                 lon: lon,
                 variable_name: variable.into(),
                 file: file,
@@ -67,7 +75,7 @@ impl Dataset {
     pub fn get_fill_value(&self) -> Option<f32> {
         if let Some(var) =  self.file.root.variables.get(&self.variable_name) {
             if let Some(attr) = var.attributes.get("_FillValue") {
-                 return attr.get_float(true).ok();
+                return attr.get_float(true).ok();
             }
         }
         None
@@ -78,18 +86,16 @@ impl Dataset {
      * the lon/lat range of the dataset
      */
     fn contains_bbox(&self, bbox: &Bbox) -> bool {
-        let (lon_min, lon_max) = (self.lon[0], self.lon[self.lon.len() -1]);
-        let (lat_min, lat_max) = (self.lat[0], self.lat[self.lat.len() -1]);
-        if bbox.west <= lon_min && bbox.east <= lon_min {
+        if bbox.west <= self.min_lon && bbox.east <= self.min_lon {
             return false;
         }
-        if bbox.west >= lon_max && bbox.east >= lon_max {
+        if bbox.west >= self.max_lon && bbox.east >= self.max_lon {
             return false;
         }
-        if bbox.south <= lat_min && bbox.north <= lat_min {
+        if bbox.south <= self.min_lat && bbox.north <= self.min_lat {
             return false;
         }
-        if bbox.south >= lat_max && bbox.north >= lat_max  {
+        if bbox.south >= self.max_lat && bbox.north >= self.max_lat  {
             return false;
         }
         return true;
@@ -99,12 +105,10 @@ impl Dataset {
      * Check if the point (lat, lon in WebMercator EPSG:3857)  is contained in the dataset extend.
      */
     fn contains_point(&self, lat: f64, lon: f64) -> bool {
-        let (lon_min, lon_max) = (self.lon[0], self.lon[self.lon.len() -1]);
-        let (lat_min, lat_max) = (self.lat[0], self.lat[self.lat.len() -1]);
-        if lon < lon_min || lon > lon_max {
+        if lon < self.min_lon || lon > self.max_lon {
             return false;
         }
-        if lat < lat_min || lat > lat_max {
+        if lat < self.min_lat || lat > self.max_lat {
             return false;
         }
         return true;
@@ -121,15 +125,26 @@ impl Dataset {
         }
 
         // get longitude indices containing the tile data
-        let i_lon_min: usize = search_closest_idx_below(&self.lon, bbox.west)
+        let mut i_lon_min: usize = search_closest_idx_below(&self.lon, bbox.west)
             .ok_or(format!("Longitude error"))?; 
-        let i_lon_max: usize = search_closest_idx_over(&self.lon, bbox.east)
+        let mut i_lon_max: usize = search_closest_idx_over(&self.lon, bbox.east)
             .ok_or(format!("Longitude error"))?; 
+        if i_lon_max < i_lon_min {
+            let tmp = i_lon_max;
+            i_lon_max = i_lon_min;
+            i_lon_min = tmp;
+        }
+
         // get latitude indices containing the tile data
-        let i_lat_min: usize = search_closest_idx_below(&self.lat, bbox.south)
+        let mut i_lat_min: usize = search_closest_idx_below(&self.lat, bbox.south)
             .ok_or(format!("Latitude error"))?; 
-        let i_lat_max: usize = search_closest_idx_over(&self.lat, bbox.north)
+        let mut i_lat_max: usize = search_closest_idx_over(&self.lat, bbox.north)
             .ok_or(format!("Latitude error"))?; 
+        if i_lat_max < i_lat_min {
+            let tmp = i_lat_max;
+            i_lat_max = i_lat_min;
+            i_lat_min = tmp;
+        }
         // Extract data from the netCDF Dataset
         if let Some(variable) = self.file.root.variables.get(&self.variable_name) {
             
@@ -163,7 +178,11 @@ impl Dataset {
 
             return Ok(
                 TileData {
+                    min_lon: lon[0].min(lon[lon.len() -1]),
+                    max_lon: lon[0].max(lon[lon.len() -1]),
                     lon: lon,
+                    min_lat: lat[0].min(lat[lat.len() -1]),
+                    max_lat: lat[0].max(lat[lat.len() -1]),
                     lat: lat,
                     values: var_values,
                     bbox: bbox,

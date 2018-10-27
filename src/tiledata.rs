@@ -1,6 +1,6 @@
 use tile::{Tile,Bbox};
 use std::f32;
-use utils::{search_closest_idx,search_closest_idx_below,search_closest_idx_over};
+use utils::{search_closest_idx_below,search_closest_idx_over};
 
 pub const TILE_SIZE: usize = 256;
 
@@ -9,8 +9,12 @@ pub const TILE_SIZE: usize = 256;
 pub struct TileData {
     /// Must be expressed in meters, in ascending order
     pub lat: Vec<f64>,
+    pub min_lat: f64,
+    pub max_lat: f64,
     /// Must be expressed in meters, in ascending order
     pub lon: Vec<f64>,
+    pub min_lon: f64,
+    pub max_lon: f64,
     /// Values must be a flattened array (lat, lon)
     pub values: Vec<f32>,
     pub bbox: Bbox,
@@ -26,22 +30,21 @@ impl TileData {
     pub fn to_tile_grid(&self) -> Box<[[f32; TILE_SIZE]; TILE_SIZE]> {
 
         // Build latitude needed for each pixel
-        let lat_inc: f64 = (self.bbox.north -self.bbox.south) / (TILE_SIZE as f64);
+        let lat_inc: f64 = (self.bbox.north -self.bbox.south).abs() / (TILE_SIZE as f64);
         let lats: Vec<f64> = (0..TILE_SIZE).map(|i| {
             self.bbox.south + lat_inc * (0.5 + i as f64)
         }).collect();
 
         // Build longitude needed for each pixel
-        let lon_inc: f64 = (self.bbox.east - self.bbox.west) / (TILE_SIZE as f64);
+        let lon_inc: f64 = (self.bbox.east - self.bbox.west).abs() / (TILE_SIZE as f64);
         let lons: Vec<f64> = (0..TILE_SIZE).map(|i| {
             self.bbox.west + lon_inc * (0.5 + i as f64)
         }).collect();
 
-        // Find out values boundaries
-        let lat_min: f64 = self.lat[0] - 0.5 * lat_inc;
-        let lat_max: f64 = self.lat[self.lat.len() - 1] + 0.5 * lat_inc;
-        let lon_min: f64 = self.lon[0] - 0.5 * lon_inc;
-        let lon_max: f64 = self.lon[self.lon.len() - 1] + 0.5 * lon_inc;
+        let lat_min: f64 = self.min_lat - 0.5 * lat_inc;
+        let lat_max: f64 = self.max_lat + 0.5 * lat_inc;
+        let lon_min: f64 = self.min_lon - 0.5 * lon_inc;
+        let lon_max: f64 = self.max_lon + 0.5 * lon_inc;
         // this closure returns true if the lon/lat coordinates 
         // are included in the dataset
         let in_value_extend = | lat: f64, lon: f64 | -> bool {
@@ -79,26 +82,48 @@ impl TileData {
     fn resample_average(&self, requested_lat: f64, requested_lon: f64, lat_inc: f64, lon_inc: f64) ->  f32 {
 
         // get the index ot the lowest bound
-        let min_lat_idx = search_closest_idx(
+        let mut min_lat_idx = search_closest_idx_below(
             &self.lat,
             requested_lat - lat_inc / 2.
         ).unwrap();
-        let min_lon_idx = search_closest_idx(
+        let mut min_lon_idx = search_closest_idx_below(
             &self.lon,
             requested_lon - lon_inc / 2.
         ).unwrap();
 
-        // get the index ot the highest bound
-        let mut max_lat_idx = min_lat_idx;
-        while max_lat_idx != (self.lat.len() -1) 
-            && self.lat[max_lat_idx] < (requested_lat + lat_inc / 2.) {
-            max_lat_idx += 1;
+        // get the index ot the lowest bound
+        let mut max_lat_idx = search_closest_idx_over(
+            &self.lat,
+            requested_lat + lat_inc / 2.
+        ).unwrap();
+        let mut max_lon_idx = search_closest_idx_over(
+            &self.lon,
+            requested_lon + lon_inc / 2.
+        ).unwrap();
+
+        // swap indices in case of desc ordering
+        if max_lat_idx < min_lat_idx {
+            let tmp = max_lat_idx;
+            max_lat_idx = min_lat_idx;
+            min_lat_idx = tmp;
         }
-        let mut max_lon_idx = min_lon_idx;
-        while max_lon_idx != (self.lon.len() -1) 
-            && self.lon[max_lon_idx] < (requested_lon + lon_inc / 2.) {
-            max_lon_idx += 1;
+        if max_lon_idx < min_lon_idx {
+            let tmp = max_lon_idx;
+            max_lon_idx = min_lon_idx;
+            min_lon_idx = tmp;
         }
+        //// get the index ot the highest bound
+        //// get the index ot the highest bound
+        //let mut max_lat_idx = min_lat_idx;
+        //while max_lat_idx != (self.lat.len() -1) 
+            //&& self.lat[max_lat_idx] < (requested_lat + lat_inc / 2.) {
+            //max_lat_idx += 1;
+        //}
+        //let mut max_lon_idx = min_lon_idx;
+        //while max_lon_idx != (self.lon.len() -1) 
+            //&& self.lon[max_lon_idx] < (requested_lon + lon_inc / 2.) {
+            //max_lon_idx += 1;
+        //}
         // FETCH values inside the square defined by the bounds
         let mut values: Vec<f32> = Vec::with_capacity(
             (max_lon_idx - min_lon_idx) * (max_lat_idx - min_lat_idx)
@@ -129,15 +154,29 @@ impl TileData {
     /// It basically performs a bilinear interpolation
     fn interpolate_value_at(&self, requested_lat: f64, requested_lon: f64) ->  f32 {
         // fetch nearest longitude / latitude indices
-        let lat_idx = search_closest_idx(&self.lat, requested_lat).unwrap();
-        let lon_idx = search_closest_idx(&self.lon, requested_lon).unwrap();
+        let lat_idx = search_closest_idx_below(&self.lat, requested_lat).unwrap();
+        let lon_idx = search_closest_idx_below(&self.lon, requested_lon).unwrap();
 
         // see if we can interpolate the data, we need 4 points inside the bounding
         // box of self.lon and self.lat
-        let can_interp_lon = (lon_idx > 0 || self.lon[lon_idx] < requested_lon) 
-               && (lon_idx < self.lon.len()-1 || self.lon[lon_idx] > requested_lon);
-        let can_interp_lat = (lat_idx > 0 || self.lat[lat_idx] < requested_lat) 
-               && (lat_idx < self.lat.len()-1 || self.lat[lat_idx] > requested_lat);
+        let mut can_interp_lat: bool = true;
+        let mut other_lat_idx: usize = lat_idx;
+        if lat_idx > 0 && self.lat[lat_idx -1] > self.lat[lat_idx] {
+            other_lat_idx -= 1;
+        } else if lat_idx < self.lat.len() -1 && self.lat[lat_idx +1] > self.lat[lat_idx] {
+            other_lat_idx += 1;
+        } else {
+            can_interp_lat = false;
+        }
+        let mut can_interp_lon: bool = true;
+        let mut other_lon_idx: usize = lon_idx;
+        if lon_idx > 0 && self.lon[lon_idx -1] > self.lon[lon_idx] {
+            other_lon_idx -= 1;
+        } else if lon_idx < self.lon.len() -1 && self.lon[lon_idx +1] > self.lon[lon_idx] {
+            other_lon_idx += 1;
+        } else {
+            can_interp_lon = false;
+        }
 
         // this function interpolate a value between 2 other
         // * `a` and `b` are the position of the 2 input points, 
@@ -154,18 +193,6 @@ impl TileData {
                      + vb * ((x - a).abs() / (a - b).abs()) as f32;
             return vx;
         };
-
-        // get the indices of the other points needed to interpolate
-        let other_lon_idx: usize = if requested_lon > self.lon[lon_idx] {
-            lon_idx +1 
-        } else if lon_idx > 0 { 
-            lon_idx -1 
-        } else { 0 }; 
-        let other_lat_idx: usize = if requested_lat > self.lat[lat_idx] {
-            lat_idx +1 
-        } else if lat_idx > 0 {
-            lat_idx -1 
-        } else { 0 }; 
 
         if can_interp_lon && can_interp_lat {
             // First interpolate linearly the 4 points at the requested longitude
@@ -252,7 +279,11 @@ impl TileData {
                 
                 sub_tiledata.push(
                     Self {
+                        min_lon: subset_lon[0].min(subset_lon[subset_lon.len() -1]),
+                        max_lon: subset_lon[0].max(subset_lon[subset_lon.len() -1]),
                         lon: subset_lon,
+                        min_lat: subset_lat[0].min(subset_lat[subset_lat.len() -1]),
+                        max_lat: subset_lat[0].max(subset_lat[subset_lat.len() -1]),
                         lat: subset_lat,
                         values: subset_values,
                         bbox: xy,

@@ -88,5 +88,5 @@ For this library to work, you need to provide a netCDF file:
 
 * With bi-dimensional variables (latititude, longitude)
 
-* With sorted longitude and latitude dimensions (in ascending order).
+* With sorted longitude and latitude dimensions (in ascending or descending order).
 

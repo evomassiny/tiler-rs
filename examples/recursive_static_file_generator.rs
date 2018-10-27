@@ -5,7 +5,7 @@ fn main() {
     let cache_path = "./examples_data/cache/";
     // The dataset must :
     //  - use the WGS84 coordinate system
-    //  - have its longitude and latitiude sorted in ascending order
+    //  - have its longitude and latitiude sorted (ascending or descending)
     //  - have its main variable expressed in (lat, lon)
     let dataset_path = "./examples_data/wind_magnitude_reduced.nc";
 
