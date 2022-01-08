@@ -28,7 +28,7 @@ impl ImgTile {
             &*self.pixels, // '*' to unbox and '&' to get a &[] 
             TILE_SIZE as u32,
             TILE_SIZE as u32,
-            image::RGBA(8)
+            image::ColorType::Rgba8,
         );
     }
 }

@@ -146,7 +146,7 @@ impl TileData {
         if valid_count == 0. {
             return f32::NAN;
         }
-        (pixel_value / valid_count)
+        pixel_value / valid_count
     }
 
     /// This function fetch and interpolate the data from self.value, self.lon, self.lat
